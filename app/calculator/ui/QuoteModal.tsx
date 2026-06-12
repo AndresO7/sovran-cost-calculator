@@ -128,10 +128,12 @@ export function QuoteModal({
             </div>
             <h2
               style={{
-                fontFamily: "var(--font-bodoni)",
-                fontWeight: 500,
-                fontSize: "clamp(22px, 2.6vw, 30px)",
-                letterSpacing: "0.04em",
+                fontFamily: "var(--font-inter-tight)",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                fontSize: "clamp(20px, 2.3vw, 27px)",
+                letterSpacing: "-0.005em",
+                lineHeight: 1.05,
                 color: FG,
                 marginBottom: 12,
               }}
@@ -173,15 +175,17 @@ export function QuoteModal({
             </div>
             <h2
               style={{
-                fontFamily: "var(--font-bodoni)",
-                fontWeight: 500,
-                fontSize: "clamp(24px, 2.8vw, 34px)",
-                letterSpacing: "0.03em",
+                fontFamily: "var(--font-inter-tight)",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                fontSize: "clamp(22px, 2.5vw, 30px)",
+                letterSpacing: "-0.005em",
+                lineHeight: 1.05,
                 color: FG,
                 marginBottom: 22,
               }}
             >
-              Your detailed quote
+              Your detailed <em style={{ fontStyle: "italic", color: ACCENT }}>quote</em>
             </h2>
 
             {/* summary */}

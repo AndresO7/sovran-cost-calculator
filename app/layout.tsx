@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bodoni_Moda, Outfit } from "next/font/google";
+import { Bodoni_Moda, Inter_Tight, Outfit } from "next/font/google";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -12,6 +12,13 @@ const bodoni = Bodoni_Moda({
   variable: "--font-bodoni",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+});
+
+const interTight = Inter_Tight({
+  variable: "--font-inter-tight",
+  subsets: ["latin"],
+  weight: ["700", "800", "900"],
   style: ["normal", "italic"],
 });
 
@@ -29,7 +36,7 @@ export default function RootLayout({
   return (
     <html
       lang="en-GB"
-      className={`${outfit.variable} ${bodoni.variable} h-full antialiased`}
+      className={`${outfit.variable} ${bodoni.variable} ${interTight.variable} h-full antialiased`}
     >
       <body className="min-h-full">{children}</body>
     </html>

@@ -242,17 +242,20 @@ export function StartScreen({ dispatch }: { dispatch: React.Dispatch<CalculatorA
           <h1
             data-intro
             style={{
-              fontFamily: "var(--font-bodoni)",
-              fontWeight: 500,
-              fontSize: "clamp(28px, 3.8vw, 56px)",
-              letterSpacing: "0.02em",
-              lineHeight: 1.14,
+              fontFamily: "var(--font-inter-tight)",
+              fontWeight: 900,
+              textTransform: "uppercase",
+              fontSize: "clamp(30px, 3.9vw, 58px)",
+              letterSpacing: "-0.01em",
+              lineHeight: 1.04,
               color: FG,
-              maxWidth: "15em",
+              maxWidth: "12em",
             }}
           >
-            Your extension, priced
-            <em style={{ fontStyle: "italic", color: ACCENT }}> in thirty seconds.</em>
+            Your extension,
+            <br />
+            priced{" "}
+            <em style={{ fontStyle: "italic", color: ACCENT }}>in thirty seconds</em>
           </h1>
           <p
             data-intro
@@ -353,11 +356,11 @@ export function StartScreen({ dispatch }: { dispatch: React.Dispatch<CalculatorA
                         <span style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                           <span
                             style={{
-                              fontFamily: "var(--font-bodoni)",
-                              fontWeight: 500,
-                              fontSize: "clamp(16px, 1.3vw, 19px)",
-                              letterSpacing: "0.04em",
-                              color: "rgba(239,233,225,0.85)",
+                              fontFamily: "var(--font-outfit)",
+                              fontWeight: 400,
+                              fontSize: "clamp(14px, 1.15vw, 16.5px)",
+                              letterSpacing: "0.05em",
+                              color: "rgba(239,233,225,0.88)",
                             }}
                           >
                             {PROTOTYPES[o.id].label}
@@ -443,11 +446,11 @@ export function StartScreen({ dispatch }: { dispatch: React.Dispatch<CalculatorA
                       <span style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                         <span
                           style={{
-                            fontFamily: "var(--font-bodoni)",
-                            fontWeight: 500,
-                            fontSize: "clamp(16px, 1.3vw, 19px)",
-                            letterSpacing: "0.04em",
-                            color: "rgba(239,233,225,0.85)",
+                            fontFamily: "var(--font-outfit)",
+                            fontWeight: 400,
+                            fontSize: "clamp(14px, 1.15vw, 16.5px)",
+                            letterSpacing: "0.05em",
+                            color: "rgba(239,233,225,0.88)",
                           }}
                         >
                           {o.label}
