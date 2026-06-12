@@ -1,26 +1,118 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* warm near-black + cream, matching sovrangroup.co.uk */
+  --background: #0d0c0a;
+  --foreground: #efe9e1;
+  --accent: #c9a96e;
+  --muted: rgba(239, 233, 225, 0.5);
+  --nav-height: 76px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-outfit), sans-serif;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+::placeholder {
+  color: rgba(239, 233, 225, 0.3);
+}
+
+input:focus {
+  border-bottom-color: rgba(239, 233, 225, 0.5) !important;
+}
+
+::selection {
+  background: rgba(201, 169, 110, 0.35);
+}
+
+/* ------------------------------ calculator layout ------------------------------ */
+
+.calc-root {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--background);
+}
+
+.calc-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.calc-viewport {
+  flex: 1;
+  min-width: 0;
+}
+
+.calc-panel {
+  width: clamp(320px, 30vw, 430px);
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  body {
+    overflow: auto;
+  }
+  .calc-root {
+    height: auto;
+    min-height: 100dvh;
+  }
+  .calc-body {
+    flex-direction: column;
+  }
+  .calc-viewport {
+    height: 56dvh;
+    flex: none;
+  }
+  .calc-panel {
+    width: 100%;
+    border-left: none !important;
+    border-top: 1px solid rgba(239, 233, 225, 0.1);
+  }
+  .calc-topbar {
+    flex-wrap: wrap;
+    height: auto !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+    row-gap: 10px !important;
+  }
+}
+
+/* -------------------------------- animations -------------------------------- */
+
+@keyframes panelFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
