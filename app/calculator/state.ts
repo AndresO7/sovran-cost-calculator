@@ -15,6 +15,8 @@ import {
 export type TabId = "ground" | "loft";
 
 export interface CalculatorState {
+  /** false until the intro questions are answered */
+  started: boolean;
   prototype: PrototypeId;
   ground: {
     size: SizeId;
@@ -33,6 +35,7 @@ export interface CalculatorState {
 }
 
 export const initialState: CalculatorState = {
+  started: false,
   prototype: "townhouse",
   ground: {
     size: "M",
@@ -48,6 +51,7 @@ export const initialState: CalculatorState = {
 };
 
 export type CalculatorAction =
+  | { type: "BEGIN"; prototype: PrototypeId; focus: "ground" | "loft" | "both" }
   | { type: "SET_PROTOTYPE"; prototype: PrototypeId }
   | { type: "SET_SIZE"; size: SizeId }
   | { type: "SET_MATERIAL"; material: MaterialId }
@@ -65,6 +69,17 @@ export function reducer(
   action: CalculatorAction
 ): CalculatorState {
   switch (action.type) {
+    case "BEGIN": {
+      // loft-led projects open on the Loft tab with a dormer pre-selected
+      const wantsLoft = action.focus !== "ground";
+      return {
+        ...state,
+        started: true,
+        prototype: action.prototype,
+        loft: { ...state.loft, type: wantsLoft ? "dormer" : "none" },
+        activeTab: action.focus === "loft" ? "loft" : "ground",
+      };
+    }
     case "SET_PROTOTYPE": {
       if (action.prototype === state.prototype) return state;
       const allowed = PROTOTYPES[action.prototype].loftTypes;

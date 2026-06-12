@@ -24,6 +24,7 @@ function useCountUp(value: number): number {
   return display;
 }
 
+/** Sub-toolbar under the site nav: prototype tabs · live estimate · CTA. */
 export function TopBar({
   state,
   price,
@@ -37,40 +38,26 @@ export function TopBar({
   const high = useCountUp(price.high);
 
   return (
-    <header
+    <div
       className="calc-topbar"
       style={{
         display: "flex",
         alignItems: "center",
         gap: "clamp(14px, 2vw, 36px)",
-        height: "var(--nav-height)",
+        height: 60,
         padding: "0 clamp(16px, 2.5vw, 44px)",
         borderBottom: `1px solid ${LINE}`,
-        background: "var(--background)",
+        background: "rgba(17, 16, 14, 0.6)",
         position: "relative",
         zIndex: 20,
+        flexShrink: 0,
       }}
     >
-      {/* serif wordmark, like the site */}
-      <div style={{ display: "flex", alignItems: "center", gap: "clamp(12px, 1.4vw, 22px)" }}>
-        <span
-          style={{
-            fontFamily: "var(--font-bodoni)",
-            fontWeight: 500,
-            letterSpacing: "0.12em",
-            fontSize: "clamp(20px, 1.7vw, 27px)",
-            color: FG,
-            lineHeight: 1,
-          }}
-        >
-          SOVRAN
-        </span>
-        <span aria-hidden style={{ width: 1, height: 26, background: LINE }} />
-        <span style={{ ...microLabel, whiteSpace: "nowrap" }}>Cost Calculator</span>
-      </div>
+      <span style={{ ...microLabel, whiteSpace: "nowrap" }}>Configure</span>
+      <span aria-hidden style={{ width: 1, height: 22, background: LINE }} />
 
-      {/* prototype selector — quiet text tabs with gold rule */}
-      <nav style={{ display: "flex", gap: "clamp(14px, 1.8vw, 30px)", marginLeft: "clamp(2px, 1.5vw, 20px)" }}>
+      {/* prototype selector */}
+      <nav style={{ display: "flex", gap: "clamp(14px, 1.8vw, 30px)" }}>
         {(Object.keys(PROTOTYPES) as PrototypeId[]).map((id) => {
           const active = id === state.prototype;
           return (
@@ -88,7 +75,7 @@ export function TopBar({
                 background: "transparent",
                 border: "none",
                 borderBottom: `1px solid ${active ? ACCENT : "transparent"}`,
-                padding: "10px 2px 8px",
+                padding: "8px 2px 6px",
                 cursor: "pointer",
                 transition: "all 0.35s ease",
                 whiteSpace: "nowrap",
@@ -103,15 +90,15 @@ export function TopBar({
       <div style={{ flex: 1 }} />
 
       {/* live estimate, Didone numerals */}
-      <div style={{ textAlign: "right" }}>
-        <div style={{ ...microLabel, fontSize: "clamp(7px, 0.58vw, 9px)", marginBottom: 4 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+        <span style={{ ...microLabel, fontSize: "clamp(7px, 0.58vw, 9px)" }}>
           Estimated Cost
-        </div>
-        <div
+        </span>
+        <span
           style={{
             fontFamily: "var(--font-bodoni)",
             fontWeight: 600,
-            fontSize: "clamp(18px, 1.8vw, 28px)",
+            fontSize: "clamp(17px, 1.6vw, 24px)",
             letterSpacing: "0.02em",
             color: FG,
             fontVariantNumeric: "tabular-nums",
@@ -120,18 +107,18 @@ export function TopBar({
           }}
         >
           {formatPrice(low)}
-          <span style={{ color: ACCENT, padding: "0 0.35em", fontWeight: 400 }}>—</span>
+          <span style={{ color: ACCENT, padding: "0 0.3em", fontWeight: 400 }}>—</span>
           {formatPrice(high)}
-        </div>
+        </span>
       </div>
 
-      <span aria-hidden style={{ width: 1, height: 26, background: LINE }} />
+      <span aria-hidden style={{ width: 1, height: 22, background: LINE }} />
 
-      {/* CTA — bordered rectangle with arrow, like the site */}
+      {/* CTA — bordered rectangle with arrow */}
       <button
         className="calc-cta"
         onClick={() => dispatch({ type: "SET_QUOTE_OPEN", open: true })}
-        style={arrowButton}
+        style={{ ...arrowButton, padding: "10px clamp(14px, 1.6vw, 22px)" }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = FG;
           e.currentTarget.style.color = "#0d0c0a";
@@ -146,6 +133,6 @@ export function TopBar({
         Detailed Quote
         <Arrow />
       </button>
-    </header>
+    </div>
   );
 }

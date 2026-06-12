@@ -9,6 +9,8 @@ import { CalculatorState, initialState, reducer } from "./state";
 import { ConfigPanel } from "./ui/ConfigPanel";
 import { ACCENT, FAINT, microLabel, MUTED } from "./ui/controls";
 import { QuoteModal } from "./ui/QuoteModal";
+import { SiteNav } from "./ui/SiteNav";
+import { StartScreen } from "./ui/StartScreen";
 import { TopBar } from "./ui/TopBar";
 
 const Scene = dynamic(() => import("./Scene"), {
@@ -21,30 +23,40 @@ export default function Calculator() {
   const price = useMemo(() => calculatePrice(state), [state]);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // entrance reveal
+  // entrance reveal — runs once the intro questions are answered
   useEffect(() => {
     const root = rootRef.current;
-    if (!root) return;
+    if (!root || !state.started) return;
     const ctx = gsap.context(() => {
       gsap.from(".calc-topbar", { y: -24, opacity: 0, duration: 0.9, ease: "power3.out" });
       gsap.from(".calc-viewport", { opacity: 0, duration: 1.4, delay: 0.25, ease: "power2.out" });
       gsap.from(".calc-panel", { x: 36, opacity: 0, duration: 1.0, delay: 0.35, ease: "power3.out" });
     }, root);
     return () => ctx.revert();
-  }, []);
+  }, [state.started]);
 
   return (
-    <div ref={rootRef} className="calc-root">
-      <TopBar state={state} price={price} dispatch={dispatch} />
-      <div className="calc-body">
-        <div className="calc-viewport" style={{ position: "relative", background: "var(--background)" }}>
-          <SceneBoundary>
-            <Scene state={state} />
-          </SceneBoundary>
-          <ViewportDressing state={state} />
-        </div>
-        <ConfigPanel state={state} dispatch={dispatch} />
-      </div>
+    <div ref={rootRef} className="calc-root" style={{ position: "relative" }}>
+      <SiteNav />
+      {state.started ? (
+        <>
+          <TopBar state={state} price={price} dispatch={dispatch} />
+          <div className="calc-body">
+            <div
+              className="calc-viewport"
+              style={{ position: "relative", background: "var(--background)" }}
+            >
+              <SceneBoundary>
+                <Scene state={state} />
+              </SceneBoundary>
+              <ViewportDressing state={state} />
+            </div>
+            <ConfigPanel state={state} dispatch={dispatch} />
+          </div>
+        </>
+      ) : (
+        <StartScreen dispatch={dispatch} />
+      )}
       {state.quoteOpen && <QuoteModal state={state} price={price} dispatch={dispatch} />}
     </div>
   );

@@ -25,10 +25,11 @@ export default function Scene({ state }: { state: CalculatorState }) {
       <color attach="background" args={["#0d0c0a"]} />
       <fog attach="fog" args={["#0d0c0a", 24, 52]} />
 
-      <hemisphereLight args={["#3d4256", "#181410", 0.55]} />
+      <hemisphereLight args={["#454a5e", "#1a1612", 0.75]} />
+      {/* key — warm, raking across the garden elevation */}
       <directionalLight
         position={[9, 12, 7]}
-        intensity={1.9}
+        intensity={1.7}
         color="#ffe2c2"
         castShadow
         shadow-mapSize-width={2048}
@@ -40,7 +41,10 @@ export default function Scene({ state }: { state: CalculatorState }) {
         shadow-camera-far={45}
         shadow-bias={-0.0004}
       />
-      <directionalLight position={[-10, 5.5, -8]} intensity={0.5} color="#8fa0d8" />
+      {/* front fill — lifts the street facade when orbiting round */}
+      <directionalLight position={[4, 7, -12]} intensity={0.9} color="#e6d8c3" />
+      {/* side fill — cool wash on the left flank */}
+      <directionalLight position={[-12, 6, -2]} intensity={0.6} color="#9fb0d8" />
 
       {state.prototype === "townhouse" ? (
         <Townhouse key="townhouse" state={state} />

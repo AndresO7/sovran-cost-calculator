@@ -96,6 +96,22 @@ input:focus {
     padding-bottom: 12px !important;
     row-gap: 10px !important;
   }
+  .site-nav-links {
+    display: none !important;
+  }
+  .start-root {
+    overflow-y: auto !important;
+  }
+  .start-cols {
+    display: flex !important;
+    flex-direction: column;
+    height: auto !important;
+    padding-top: 28px !important;
+    padding-bottom: 48px !important;
+  }
+  .start-divider {
+    display: none;
+  }
 }
 
 /* -------------------------------- animations -------------------------------- */

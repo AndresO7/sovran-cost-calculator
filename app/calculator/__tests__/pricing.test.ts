@@ -3,6 +3,7 @@ import { calculatePrice, formatExact, formatPrice, formatRange } from "../pricin
 import { CalculatorState, initialState, reducer } from "../state";
 
 const base: CalculatorState = {
+  started: true,
   prototype: "townhouse",
   ground: {
     size: "M",
@@ -88,6 +89,28 @@ describe("formatting", () => {
 
   it("formats exact GBP figures with separators", () => {
     expect(formatExact(69400)).toBe("£69,400");
+  });
+});
+
+describe("reducer intro flow", () => {
+  it("BEGIN with ground focus starts on the ground tab with no loft", () => {
+    const next = reducer(initialState, { type: "BEGIN", prototype: "villa", focus: "ground" });
+    expect(next.started).toBe(true);
+    expect(next.prototype).toBe("villa");
+    expect(next.activeTab).toBe("ground");
+    expect(next.loft.type).toBe("none");
+  });
+
+  it("BEGIN with loft focus opens the loft tab with a dormer pre-selected", () => {
+    const next = reducer(initialState, { type: "BEGIN", prototype: "townhouse", focus: "loft" });
+    expect(next.activeTab).toBe("loft");
+    expect(next.loft.type).toBe("dormer");
+  });
+
+  it("BEGIN with both keeps ground tab and pre-selects a dormer", () => {
+    const next = reducer(initialState, { type: "BEGIN", prototype: "villa", focus: "both" });
+    expect(next.activeTab).toBe("ground");
+    expect(next.loft.type).toBe("dormer");
   });
 });
 
