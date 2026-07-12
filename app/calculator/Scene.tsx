@@ -1,10 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import { useEffect, useState } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { House } from "./models/House";
+import { setGlassEnvMap } from "./models/materials";
 import { CalculatorState } from "./state";
+
+/**
+ * Procedural studio env-map fed to the glazing only — gives the glass
+ * sky/room reflections without touching the analytic lighting elsewhere.
+ */
+function GlassEnvironment() {
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    const pmrem = new THREE.PMREMGenerator(gl);
+    const env = pmrem.fromScene(new RoomEnvironment(), 0.04);
+    setGlassEnvMap(env.texture);
+    pmrem.dispose();
+    return () => {
+      setGlassEnvMap(null);
+      env.texture.dispose();
+    };
+  }, [gl]);
+  return null;
+}
 
 /**
  * The architect's-model viewport: soft daylight on a warm cream studio,
@@ -22,6 +44,8 @@ export default function Scene({ state }: { state: CalculatorState }) {
     >
       <color attach="background" args={["#efe9dd"]} />
       <fog attach="fog" args={["#efe9dd", 34, 75]} />
+
+      <GlassEnvironment />
 
       <hemisphereLight args={["#e8f0f8", "#cfc5b2", 0.95]} />
       {/* sun — warm, raking across the garden elevation */}

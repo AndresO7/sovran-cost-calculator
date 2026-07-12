@@ -33,7 +33,7 @@ export interface CalculatorState {
 export const initialState: CalculatorState = {
   started: false,
   ground: {
-    size: "M",
+    size: "S",
     material: "render",
     roof: "rooflights",
     glazing: "bifold",

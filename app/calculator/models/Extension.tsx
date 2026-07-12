@@ -14,7 +14,8 @@ import { flatMaterial, glassMaterial, interiorMaterial } from "./materials";
 import { CBox, LeanTo, TexBox } from "./parts";
 
 const EXT_WALL_H = 2.85;
-const PITCH_RISE = 0.9;
+// the lean-to head must stay below the host's first-floor cills (~y 3.38)
+const PITCH_RISE = 0.45;
 
 interface ExtensionProps {
   width: number;
@@ -76,6 +77,12 @@ export function Extension({
       : width * (glazing === "sliding" ? 0.78 : 0.86);
   const glassH = 2.3;
 
+  // real structural opening in the garden wall — the glazed unit sits inside
+  // it, recessed behind the facade like the reference renders
+  const wallT = 0.22; // garden wall thickness → visible reveal depth
+  const openW = unitW + 0.16;
+  const openH = 2.42;
+
   // pair of flat rooflights centred on the roof
   const skyS = Math.min(1.15, width * 0.3);
   const skyGap = Math.min(0.55, width * 0.12);
@@ -86,10 +93,33 @@ export function Extension({
 
   return (
     <group ref={group}>
+      {/* solid volume stops short of the garden face… */}
       <TexBox
-        size={[width, wallH, depth]}
-        position={[0, wallH / 2, depth / 2]}
+        size={[width, wallH, depth - wallT]}
+        position={[0, wallH / 2, (depth - wallT) / 2]}
         matId={material}
+      />
+      {/* …and the garden wall is built as piers + header, leaving a real
+          opening so the doors sit recessed with a visible reveal */}
+      {([-1, 1] as const).map((s) => (
+        <TexBox
+          key={s}
+          size={[(width - openW) / 2, wallH, wallT]}
+          position={[s * ((width + openW) / 4), wallH / 2, depth - wallT / 2]}
+          matId={material}
+        />
+      ))}
+      <TexBox
+        size={[openW, wallH - openH, wallT]}
+        position={[0, (wallH + openH) / 2, depth - wallT / 2]}
+        matId={material}
+      />
+      {/* stone threshold lining the recess floor */}
+      <CBox
+        size={[openW, 0.05, wallT]}
+        position={[0, 0.025, depth - wallT / 2]}
+        color="#9aa0a5"
+        castShadow={false}
       />
 
       {flatTop && (
@@ -137,8 +167,8 @@ export function Extension({
         </>
       )}
 
-      {/* garden-facing glazed doors */}
-      <group position={[0, 0, depth]}>
+      {/* garden-facing glazed doors, set back inside the opening */}
+      <group position={[0, 0, depth - 0.12]}>
         <GlazedUnit
           unitW={unitW}
           h={glassH}
@@ -169,8 +199,9 @@ export function Extension({
 }
 
 /**
- * Glazed door unit with real depth: dim interior at the back, clear glass,
- * a slim frame around every pane and a proud outer frame around the unit.
+ * Glazed door unit set into the wall opening: dim interior at the back,
+ * clear glass, a slim frame around every pane and an outer frame tucked
+ * behind the reveal — its lip sits shy of the facade, never proud of it.
  */
 function GlazedUnit({
   unitW,
@@ -199,57 +230,57 @@ function GlazedUnit({
 
   return (
     <group>
-      {/* dim interior behind the whole unit */}
-      <mesh position={[0, yMid, 0.012]} material={interiorMaterial()} castShadow={false}>
-        <planeGeometry args={[unitW, h]} />
+      {/* dim interior backstopping the whole opening */}
+      <mesh position={[0, yMid, 0]} material={interiorMaterial()} castShadow={false}>
+        <planeGeometry args={[unitW + 0.16, h + 0.12]} />
       </mesh>
 
-      {/* proud outer frame — the "double frame" read */}
-      <mesh position={[0, h + 0.04 + outerT / 2, 0.07]} material={frameMat} castShadow={false}>
-        <boxGeometry args={[unitW + outerT * 2, outerT, 0.16]} />
+      {/* outer frame — edges tucked behind the piers and header */}
+      <mesh position={[0, h + 0.04 + outerT / 2, 0.03]} material={frameMat} castShadow={false}>
+        <boxGeometry args={[unitW + outerT * 2, outerT, 0.1]} />
       </mesh>
-      <mesh position={[0, 0.02, 0.07]} material={frameMat} castShadow={false}>
-        <boxGeometry args={[unitW + outerT * 2, 0.06, 0.16]} />
+      <mesh position={[0, 0.02, 0.03]} material={frameMat} castShadow={false}>
+        <boxGeometry args={[unitW + outerT * 2, 0.06, 0.1]} />
       </mesh>
       {([-1, 1] as const).map((s) => (
         <mesh
           key={s}
-          position={[s * (unitW / 2 + outerT / 2), yMid + 0.02, 0.07]}
+          position={[s * (unitW / 2 + outerT / 2), yMid + 0.02, 0.03]}
           material={frameMat}
           castShadow={false}
         >
-          <boxGeometry args={[outerT, h + 0.1, 0.16]} />
+          <boxGeometry args={[outerT, h + 0.1, 0.1]} />
         </mesh>
       ))}
 
-      {/* panes: clear glass + slim frame per pane, set back from the outer frame */}
+      {/* panes: clear glass + slim frame per pane, deepest in the reveal */}
       {panes.map(([x0, x1], i) => {
         const cx = (x0 + x1) / 2;
         const pw = x1 - x0;
         return (
           <group key={i} position={[cx, yMid, 0]}>
-            <mesh position={[0, 0, 0.055]} material={glassMaterial()} castShadow={false}>
+            <mesh position={[0, 0, 0.02]} material={glassMaterial()} castShadow={false}>
               <planeGeometry args={[pw - 0.1, h - 0.08]} />
             </mesh>
             {/* pane frame */}
             {([-1, 1] as const).map((s) => (
               <mesh
                 key={`v${s}`}
-                position={[s * (pw / 2 - 0.028), 0, 0.09]}
+                position={[s * (pw / 2 - 0.028), 0, 0.045]}
                 material={frameMat}
                 castShadow={false}
               >
-                <boxGeometry args={[0.056, h, 0.07]} />
+                <boxGeometry args={[0.056, h, 0.05]} />
               </mesh>
             ))}
             {([-1, 1] as const).map((s) => (
               <mesh
                 key={`h${s}`}
-                position={[0, s * (h / 2 - 0.028), 0.09]}
+                position={[0, s * (h / 2 - 0.028), 0.045]}
                 material={frameMat}
                 castShadow={false}
               >
-                <boxGeometry args={[pw, 0.056, 0.07]} />
+                <boxGeometry args={[pw, 0.056, 0.05]} />
               </mesh>
             ))}
           </group>
@@ -261,7 +292,7 @@ function GlazedUnit({
         ([-1, 1] as const).map((s) => (
           <mesh
             key={s}
-            position={[s * 0.09, yMid - 0.12, 0.135]}
+            position={[s * 0.09, yMid - 0.12, 0.085]}
             material={flatMaterial("#9aa0a6", 0.35, 0.7)}
             castShadow={false}
           >

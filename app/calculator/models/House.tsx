@@ -1,17 +1,47 @@
 import { useRef } from "react";
 import * as THREE from "three";
-import { HOUSE, SIZES } from "../config";
+import { HOUSE, LoftFinishId, SIZES } from "../config";
 import { CalculatorState } from "../state";
 import { Extension } from "./Extension";
 import { Garden } from "./Garden";
 import { Loft } from "./Loft";
-import { CBox, GableWall, Roof, TexBox, usePopIn, Win } from "./parts";
+import {
+  CBox,
+  GableWall,
+  Roof,
+  TexBox,
+  usePopIn,
+  WallOpening,
+  WallWithOpenings,
+  Win,
+} from "./parts";
 
 const W = HOUSE.w;
 const D = HOUSE.d; // house z: -D → 0, garden grows +z
 const WALL_H = 5.6; // two storeys
 const ROOF_H = 2.5;
 const OVER = 0.18;
+const WALL_T = 0.22; // facade thickness → real window reveals
+
+// structural openings, in world x (the front facade group is rotated 180°,
+// so a window at local x sits at world -x)
+const FRONT_OPENINGS: WallOpening[] = [
+  { x: 1.7, y: 1.155, w: 0.94, h: 2.05 }, // front door
+  { x: -1.35, y: 1.55, w: 1.76, h: 1.51 }, // ground-floor window
+  { x: 1.7, y: 4.25, w: 1.01, h: 1.41 }, // first-floor windows
+  { x: -1.35, y: 4.25, w: 1.51, h: 1.41 },
+];
+const REAR_OPENINGS: WallOpening[] = [
+  { x: -1.55, y: 4.25, w: 1.01, h: 1.46 },
+  { x: 1.55, y: 4.25, w: 1.01, h: 1.46 },
+];
+
+// roof-edge trim reads as part of the roof, not white-painted timber
+const ROOF_TRIM: Record<LoftFinishId, string> = {
+  slate: "#565d66",
+  clay: "#8f4b32",
+  zincRoof: "#54595f",
+};
 
 /** Brick semi — two storeys, gabled roof. Hosts the extension and loft. */
 export function House({ state }: { state: CalculatorState }) {
@@ -21,16 +51,40 @@ export function House({ state }: { state: CalculatorState }) {
 
   return (
     <group ref={ref}>
-      {/* main body */}
-      <TexBox size={[W, WALL_H, D]} position={[0, WALL_H / 2, -D / 2]} matId="houseBrick" />
+      {/* main body core; front/rear facades are separate panels with real
+          punched openings so the joinery sits in genuine reveals. The core
+          stops flush with the back of each panel so the recessed glazing
+          stays clear of it */}
+      <TexBox
+        size={[W - 0.01, WALL_H, D - 0.44]}
+        position={[0, WALL_H / 2, -D / 2]}
+        matId="houseBrick"
+      />
+      <WallWithOpenings
+        w={W}
+        h={WALL_H}
+        t={WALL_T}
+        openings={FRONT_OPENINGS}
+        matId="houseBrick"
+        position={[0, 0, -D]}
+      />
+      <WallWithOpenings
+        w={W}
+        h={WALL_H}
+        t={WALL_T}
+        openings={REAR_OPENINGS}
+        matId="houseBrick"
+        position={[0, 0, -WALL_T]}
+      />
 
-      {/* eaves fascia — front and rear gutter lines only, gables stay clean */}
+      {/* eaves fascia — front and rear gutter lines only, gables stay clean;
+          finished in the roof trim colour, not painted timber */}
       {([-1, 1] as const).map((s) => (
         <CBox
           key={s}
           size={[W + 0.16, 0.14, 0.2]}
           position={[0, WALL_H - 0.07, s === 1 ? 0.04 : -D - 0.04]}
-          color="#eae5d9"
+          color={ROOF_TRIM[state.loft.finish]}
           castShadow={false}
         />
       ))}
@@ -60,7 +114,7 @@ export function House({ state }: { state: CalculatorState }) {
         color="#59606a"
         castShadow={false}
       />
-      {/* pale bargeboards frame the roof edge at each gable */}
+      {/* bargeboards frame the roof edge at each gable, matching the finish */}
       {([-1, 1] as const).map((sx) =>
         ([-1, 1] as const).map((sz) => {
           const halfD = D / 2 + OVER;
@@ -76,26 +130,26 @@ export function House({ state }: { state: CalculatorState }) {
                 -D / 2 + (sz * halfD) / 2,
               ]}
               rotation={[sz * pitch, 0, 0]}
-              color="#e8e3d7"
+              color={ROOF_TRIM[state.loft.finish]}
               castShadow={false}
             />
           );
         })
       )}
 
-      {/* rear sash windows — first floor, above the extension */}
+      {/* rear sash windows — first floor, sunk into the wall openings */}
       {[-1.55, 1.55].map((x) => (
-        <Win key={x} w={0.95} h={1.4} stone position={[x, 4.25, 0.045]} />
+        <Win key={x} w={0.95} h={1.4} stone reveal={0.12} position={[x, 4.25, 0.01]} />
       ))}
 
       {/* front facade */}
       <group position={[0, 0, -D]} rotation={[0, Math.PI, 0]}>
         <FrontDoor x={-1.7} />
         {/* ground-floor window */}
-        <Win w={1.7} h={1.45} stone position={[1.35, 1.55, 0.045]} />
+        <Win w={1.7} h={1.45} stone reveal={0.12} position={[1.35, 1.55, 0.01]} />
         {/* first-floor windows */}
-        <Win w={0.95} h={1.35} stone position={[-1.7, 4.25, 0.045]} />
-        <Win w={1.45} h={1.35} stone position={[1.35, 4.25, 0.045]} />
+        <Win w={0.95} h={1.35} stone reveal={0.12} position={[-1.7, 4.25, 0.01]} />
+        <Win w={1.45} h={1.35} stone reveal={0.12} position={[1.35, 4.25, 0.01]} />
       </group>
 
       {/* configurable pieces */}
@@ -138,23 +192,23 @@ function FrontDoor({ x }: { x: number }) {
         <CBox key={s} size={[0.14, 2.24, 0.14]} position={[s * 0.56, 1.2, 0.05]} color={stone} />
       ))}
       <CBox size={[1.26, 0.15, 0.16]} position={[0, 2.36, 0.05]} color={stone} />
-      {/* door leaf */}
-      <CBox size={[0.98, 2.12, 0.1]} position={[0, 1.14, 0.04]} color="#1e2124" />
+      {/* door leaf, sunk into the wall opening behind the stone surround */}
+      <CBox size={[0.98, 2.12, 0.1]} position={[0, 1.14, -0.1]} color="#1e2124" />
       {/* recessed panels */}
       {[0.62, 1.62].map((y) =>
         ([-1, 1] as const).map((s) => (
           <CBox
             key={`${y}-${s}`}
             size={[0.32, 0.62, 0.02]}
-            position={[s * 0.21, y, 0.095]}
+            position={[s * 0.21, y, -0.045]}
             color="#26292d"
             castShadow={false}
           />
         ))
       )}
       {/* brass handle + letter plate */}
-      <CBox size={[0.05, 0.16, 0.05]} position={[0.36, 1.1, 0.11]} color="#b98a3f" castShadow={false} />
-      <CBox size={[0.24, 0.05, 0.03]} position={[0, 0.98, 0.1]} color="#b98a3f" castShadow={false} />
+      <CBox size={[0.05, 0.16, 0.05]} position={[0.36, 1.1, -0.03]} color="#b98a3f" castShadow={false} />
+      <CBox size={[0.24, 0.05, 0.03]} position={[0, 0.98, -0.035]} color="#b98a3f" castShadow={false} />
       {/* steps */}
       <CBox size={[1.3, 0.16, 0.5]} position={[0, 0.08, 0.3]} color="#c9c2b2" />
       <CBox size={[1.5, 0.08, 0.7]} position={[0, 0.04, 0.42]} color="#bdb6a6" />

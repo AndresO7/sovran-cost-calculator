@@ -115,11 +115,59 @@ interface WinProps {
   mullion?: boolean;
   /** surround/frame colour — pale sash by default, joinery colour on new-build */
   frameColor?: string;
-  /** protruding stone head + cill, traditional brick facades */
+  /** protruding stone cill, traditional brick facades */
   stone?: boolean;
+  /**
+   * depth the sash unit sits sunk behind the facade plane. Needs a real
+   * opening in the wall (see WallWithOpenings) so the reveal is visible.
+   */
+  reveal?: number;
 }
 
-/** A sash window: frame, dim interior and clear glass set in front of it. */
+/**
+ * Rectangular frame ring built from four members — one stepped layer of
+ * joinery. `w`/`h` are outer dims, `t` member thickness, `d` depth, `z`
+ * the depth-wise centre of the ring.
+ */
+function FrameRing({
+  w,
+  h,
+  t,
+  d,
+  z,
+  material,
+}: {
+  w: number;
+  h: number;
+  t: number;
+  d: number;
+  z: number;
+  material: THREE.Material;
+}) {
+  return (
+    <group position={[0, 0, z]}>
+      {([-1, 1] as const).map((s) => (
+        <mesh key={`h${s}`} position={[0, (s * (h - t)) / 2, 0]} material={material} castShadow={false}>
+          <boxGeometry args={[w, t, d]} />
+        </mesh>
+      ))}
+      {([-1, 1] as const).map((s) => (
+        <mesh key={`v${s}`} position={[(s * (w - t)) / 2, 0, 0]} material={material} castShadow={false}>
+          <boxGeometry args={[t, h - t * 2, d]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/**
+ * A sash window built from three stepped layers of joinery — outer
+ * surround, box frame, then the sash carrying the glazing bars — each
+ * set deeper than the last so the unit reads with real depth. With
+ * `reveal` the whole unit sinks into the wall opening, leaving the brick
+ * return and a shadow gap visible — stone head/cill stay on the facade
+ * plane.
+ */
 export function Win({
   w,
   h,
@@ -129,47 +177,118 @@ export function Win({
   mullion = false,
   frameColor = "#ece7db",
   stone = false,
+  reveal = 0,
 }: WinProps) {
   const frame = flatMaterial(frameColor, 0.85);
   const stoneMat = flatMaterial("#d9d2c2", 0.9);
   return (
     <group position={position} rotation={rotation}>
-      <mesh material={frame} castShadow={false}>
-        <boxGeometry args={[w + 0.16, h + 0.16, 0.07]} />
-      </mesh>
-      {/* dim interior behind the glazing gives the glass depth */}
-      <mesh position={[0, 0, 0.037]} material={interiorMaterial()} castShadow={false}>
-        <planeGeometry args={[w, h]} />
-      </mesh>
-      <mesh position={[0, 0, 0.062]} material={glassMaterial()} castShadow={false}>
-        <planeGeometry args={[w, h]} />
-      </mesh>
-      {bars && (
-        <>
-          <mesh position={[0, 0, 0.07]} material={frame} castShadow={false}>
-            <boxGeometry args={[0.035, h, 0.014]} />
+      <group position={[0, 0, -reveal]}>
+        {/* layer 1 — outer surround, proud of the opening */}
+        <FrameRing w={w + 0.12} h={h + 0.12} t={0.06} d={0.07} z={0} material={frame} />
+        {/* layer 2 — box frame, stepped back */}
+        <FrameRing w={w + 0.02} h={h + 0.02} t={0.055} d={0.06} z={-0.035} material={frame} />
+        {/* layer 3 — sash, deepest, carries bars/mullion */}
+        <FrameRing w={w - 0.07} h={h - 0.07} t={0.05} d={0.05} z={-0.07} material={frame} />
+        {/* dim interior behind the glazing gives the glass depth */}
+        <mesh position={[0, 0, -0.1]} material={interiorMaterial()} castShadow={false}>
+          <planeGeometry args={[w, h]} />
+        </mesh>
+        <mesh position={[0, 0, -0.085]} material={glassMaterial()} castShadow={false}>
+          <planeGeometry args={[w, h]} />
+        </mesh>
+        {bars && (
+          <>
+            <mesh position={[0, 0, -0.075]} material={frame} castShadow={false}>
+              <boxGeometry args={[0.035, h - 0.12, 0.014]} />
+            </mesh>
+            <mesh position={[0, 0, -0.075]} material={frame} castShadow={false}>
+              <boxGeometry args={[w - 0.12, 0.035, 0.014]} />
+            </mesh>
+          </>
+        )}
+        {mullion && (
+          <mesh position={[0, 0, -0.075]} material={frame} castShadow={false}>
+            <boxGeometry args={[0.07, h - 0.12, 0.016]} />
           </mesh>
-          <mesh position={[0, 0, 0.07]} material={frame} castShadow={false}>
-            <boxGeometry args={[w, 0.035, 0.014]} />
-          </mesh>
-        </>
-      )}
-      {mullion && (
-        <mesh position={[0, 0, 0.07]} material={frame} castShadow={false}>
-          <boxGeometry args={[0.07, h, 0.016]} />
+        )}
+      </group>
+      {stone && (
+        /* projecting cill only — head and jambs stay plain brick */
+        <mesh position={[0, -h / 2.5 - 0.12, 0.05]} material={stoneMat} castShadow>
+          <boxGeometry args={[w + 0.34, 0.09, 0.18]} />
         </mesh>
       )}
-      {stone && (
-        <>
-          <mesh position={[0, h / 2 + 0.14, 0.03]} material={stoneMat} castShadow>
-            <boxGeometry args={[w + 0.3, 0.13, 0.13]} />
-          </mesh>
-          <mesh position={[0, -h / 2 - 0.12, 0.04]} material={stoneMat} castShadow>
-            <boxGeometry args={[w + 0.34, 0.09, 0.16]} />
-          </mesh>
-        </>
-      )}
     </group>
+  );
+}
+
+/* ------------------------------ walls with holes ----------------------------- */
+
+export interface WallOpening {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * Brick wall panel with real punched openings so windows and doors sit in
+ * genuine reveals. Lies in the XY plane (x centred, y from 0), extruding
+ * into +z by `t`. UVs are metric so the texture tiles at world scale,
+ * including on the opening returns. Pass a stable `openings` array.
+ */
+export function WallWithOpenings({
+  w,
+  h,
+  t,
+  openings,
+  matId,
+  position,
+}: {
+  w: number;
+  h: number;
+  t: number;
+  openings: WallOpening[];
+  matId: AnyMaterialId;
+  position: [number, number, number];
+}) {
+  const geometry = useMemo(() => {
+    const shape = new THREE.Shape();
+    shape.moveTo(-w / 2, 0);
+    shape.lineTo(w / 2, 0);
+    shape.lineTo(w / 2, h);
+    shape.lineTo(-w / 2, h);
+    shape.closePath();
+    for (const o of openings) {
+      const p = new THREE.Path();
+      p.moveTo(o.x - o.w / 2, o.y - o.h / 2);
+      p.lineTo(o.x - o.w / 2, o.y + o.h / 2);
+      p.lineTo(o.x + o.w / 2, o.y + o.h / 2);
+      p.lineTo(o.x + o.w / 2, o.y - o.h / 2);
+      p.closePath();
+      shape.holes.push(p);
+    }
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: t, bevelEnabled: false });
+    // ExtrudeGeometry UVs are in world units — rescale into tile space
+    const uv = geo.getAttribute("uv");
+    for (let i = 0; i < uv.count; i++) {
+      uv.setXY(i, uv.getX(i) / TILE_METRES, uv.getY(i) / TILE_METRES);
+    }
+    return geo;
+  }, [w, h, t, openings]);
+  const material = useMemo(
+    () => metricMaterial(matId, TILE_METRES, TILE_METRES),
+    [matId]
+  );
+  return (
+    <mesh
+      geometry={geometry}
+      material={material}
+      position={position}
+      castShadow
+      receiveShadow
+    />
   );
 }
 

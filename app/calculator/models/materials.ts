@@ -125,6 +125,31 @@ function paintVerticalSeams(
   };
 }
 
+function paintPanelSeams(
+  base: string,
+  seam: string,
+  cols: number,
+  jitter: number,
+  seed: number
+): Painter {
+  return (ctx, size) => {
+    const rand = mulberry(seed);
+    const panelW = size / cols;
+    const panelH = size; // fixed-length trays, one per tile height
+    ctx.fillStyle = seam;
+    ctx.fillRect(0, 0, size, size);
+    for (let i = 0; i < cols; i++) {
+      // cross joints stagger between neighbouring trays, reading as
+      // the rectangular panel grid of standing-seam cladding
+      const offset = i % 2 === 0 ? 0 : panelH / 2;
+      for (let y = -panelH; y < size + panelH; y += panelH) {
+        ctx.fillStyle = shade(base, (rand() - 0.5) * jitter);
+        ctx.fillRect(i * panelW + 2, y + offset + 1.5, panelW - 3, panelH - 3);
+      }
+    }
+  };
+}
+
 function paintPaving(seed: number, base: string, gap: string, cols = 4, jitter = 0.08): Painter {
   return (ctx, size) => {
     const rand = mulberry(seed);
@@ -199,6 +224,11 @@ const EXTRA_SPECS = {
   paving: { painter: paintPaving(111, "#d3c8a4", "#a89a78"), roughness: 0.9 },
   porcelain: { painter: paintPaving(121, "#cfc9be", "#928c80", 3, 0.04), roughness: 0.55 },
   decking: { painter: paintPlanks("#8a6a48", "#57422c", 9, 131), roughness: 0.8 },
+  zincPanels: {
+    painter: paintPanelSeams("#7d858e", "#656c74", 4, 0.06, 141),
+    roughness: 0.45,
+    metalness: 0.55,
+  },
 } satisfies Record<string, MaterialSpec>;
 
 export type ExtraMaterialId = keyof typeof EXTRA_SPECS;
@@ -267,24 +297,43 @@ export function flatMaterial(
   return mat;
 }
 
-/** Clear architectural glass — pale sky tint over a bright interior. */
-export function glassMaterial(): THREE.MeshStandardMaterial {
-  const key = "glass";
-  let mat = flatCache.get(key);
-  if (!mat) {
-    mat = new THREE.MeshStandardMaterial({
-      color: "#d8e3e9",
-      metalness: 0.22,
-      roughness: 0.07,
+let glassMat: THREE.MeshPhysicalMaterial | null = null;
+let glassEnv: THREE.Texture | null = null;
+
+/**
+ * Clear architectural glass — faint cool tint, low opacity, strongly
+ * reflective. Reads as real glazing once the scene provides an env-map
+ * via `setGlassEnvMap`; fresnel keeps grazing angles mirror-like.
+ */
+export function glassMaterial(): THREE.MeshPhysicalMaterial {
+  if (!glassMat) {
+    glassMat = new THREE.MeshPhysicalMaterial({
+      color: "#b8ccd8",
+      metalness: 0,
+      roughness: 0.05,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.3,
+      ior: 1.5,
+      envMapIntensity: 1.4,
+      envMap: glassEnv,
     });
-    flatCache.set(key, mat);
   }
-  return mat;
+  return glassMat;
 }
 
-/** The bright room seen behind clear glazing — keeps glass reading light. */
+/**
+ * Environment reflected in the glazing only — set once by the scene so
+ * the rest of the model keeps its hand-tuned analytic lighting.
+ */
+export function setGlassEnvMap(tex: THREE.Texture | null) {
+  glassEnv = tex;
+  if (glassMat) {
+    glassMat.envMap = tex;
+    glassMat.needsUpdate = true;
+  }
+}
+
+/** The dim room seen behind clear glazing — dark so glass reads as glass. */
 export function interiorMaterial(): THREE.MeshStandardMaterial {
-  return flatMaterial("#b3ada1", 0.9);
+  return flatMaterial("#31363a", 0.95);
 }
