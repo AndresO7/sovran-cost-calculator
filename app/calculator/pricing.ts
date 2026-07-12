@@ -7,7 +7,7 @@ import {
   LOFT_TYPES,
   MATERIALS,
   PATIOS,
-  PROTOTYPES,
+  SIZES,
 } from "./config";
 import { CalculatorState } from "./state";
 
@@ -23,7 +23,7 @@ export interface PriceRange {
 const roundToK = (n: number) => Math.round(n / 1000) * 1000;
 
 export function calculatePrice(state: CalculatorState): PriceRange {
-  const size = PROTOTYPES[state.prototype].sizes[state.ground.size];
+  const size = SIZES[state.ground.size];
   let total = size.area * BASE_RATE_PER_SQM;
   total += MATERIALS[state.ground.material].price;
   total += EXT_ROOFS[state.ground.roof].price;

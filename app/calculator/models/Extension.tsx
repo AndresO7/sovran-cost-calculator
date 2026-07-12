@@ -2,43 +2,45 @@ import { useLayoutEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { easing } from "maath";
 import * as THREE from "three";
-import { ExtRoofId, FRAMES, FrameId, GlazingId, LoftFinishId, MaterialId } from "../config";
-import { flatMaterial, windowMaterial } from "./materials";
-import { CBox, LeanTo, TexBox, usePopIn, Win } from "./parts";
+import {
+  ExtRoofId,
+  FRAMES,
+  FrameId,
+  GlazingId,
+  LoftFinishId,
+  MaterialId,
+} from "../config";
+import { flatMaterial, glassMaterial, interiorMaterial } from "./materials";
+import { CBox, LeanTo, TexBox } from "./parts";
 
-export const EXT_WALL_H = 2.9;
+const EXT_WALL_H = 2.85;
+const PITCH_RISE = 0.9;
 
 interface ExtensionProps {
   width: number;
   depth: number;
-  wrap?: boolean;
   material: MaterialId;
   roof: ExtRoofId;
   glazing: GlazingId;
   frame: FrameId;
-  /** whole-house roof finish, also used on the pitched lean-to */
+  /** whole-house roof finish, used on the pitched lean-to */
   roofFinish: LoftFinishId;
-  /** group x offset (e.g. flush-left for the villa wrap-around) */
-  offsetX?: number;
-  houseWidth: number;
 }
 
 /**
- * Parametric rear extension. Anchored to the house face at z=0 and growing
- * into the garden (+z). Size changes morph smoothly: children are built at
- * their exact target dimensions and the group rescales from old/new → 1.
+ * Parametric full-width rear extension. Anchored to the house face at z=0
+ * and growing into the garden (+z). Size changes morph smoothly: children
+ * are built at their exact target dimensions and the group rescales from
+ * old/new → 1.
  */
 export function Extension({
   width,
   depth,
-  wrap = false,
   material,
   roof,
   glazing,
   frame,
   roofFinish,
-  offsetX = 0,
-  houseWidth,
 }: ExtensionProps) {
   const frameColor = FRAMES[frame].color;
   const group = useRef<THREE.Group>(null);
@@ -56,29 +58,34 @@ export function Extension({
   useFrame((_, dt) => {
     if (!group.current) return;
     easing.damp3(group.current.scale, [1, 1, 1], 0.2, dt);
-    easing.damp(group.current.position, "x", offsetX, 0.2, dt);
   });
 
   const wallH = EXT_WALL_H;
   const flatTop = roof !== "pitched";
 
-  // glazing layout on the garden-facing facade
-  const panelCount = glazing === "french" ? 2 : glazing === "sliding" ? 3 : 5;
-  const glassTotal =
-    glazing === "french"
-      ? Math.min(2.2, width - 1)
-      : Math.min(width * (glazing === "bifold" ? 0.82 : 0.72), width - 0.7);
+  // garden-facing glazed unit: door leaves + fixed lights
+  const segments =
+    glazing === "double"
+      ? [0.18, 0.32, 0.32, 0.18] // sidelight · leaf · leaf · sidelight
+      : glazing === "sliding"
+        ? [1 / 3, 1 / 3, 1 / 3]
+        : [0.2, 0.2, 0.2, 0.2, 0.2];
+  const unitW =
+    glazing === "double"
+      ? Math.min(3.2, width - 1.1)
+      : width * (glazing === "sliding" ? 0.78 : 0.86);
   const glassH = 2.3;
-  const panelW = glassTotal / panelCount;
 
-  // skylights along the flat roof
-  const skylightCount = depth >= 6 ? 3 : 2;
-  const skylightW = Math.min(1.5, width * 0.42);
-  const skylightMargin = 0.9;
-  const skylightSpan = depth - skylightMargin * 2;
+  // pair of flat rooflights sitting close to the house
+  const skyS = Math.min(1.15, width * 0.3);
+  const skyGap = Math.min(0.55, width * 0.12);
+
+  // lantern footprint, centred on the roof
+  const lanW = Math.min(2.7, width * 0.58);
+  const lanD = Math.min(1.9, depth * 0.42);
 
   return (
-    <group ref={group} position={[offsetX, 0, 0]}>
+    <group ref={group}>
       <TexBox
         size={[width, wallH, depth]}
         position={[0, wallH / 2, depth / 2]}
@@ -87,165 +94,312 @@ export function Extension({
 
       {flatTop && (
         <>
+          {/* white soffit line + grey flat-roof slab with a trimmed edge */}
           <CBox
-            size={[width + 0.14, 0.07, depth + 0.14]}
+            size={[width + 0.12, 0.07, depth + 0.12]}
             position={[0, wallH - 0.035, depth / 2]}
-            color="#d8d2c6"
+            color="#eae5d9"
             castShadow={false}
           />
           <CBox
-            size={[width + 0.1, 0.16, depth + 0.1]}
+            size={[width + 0.18, 0.16, depth + 0.18]}
             position={[0, wallH + 0.08, depth / 2]}
-            color="#2e3136"
+            color="#4e5459"
           />
+          <RoofEdgeTrim w={width + 0.18} d={depth + 0.18} y={wallH + 0.18} z={depth / 2} />
         </>
       )}
 
-      {roof === "skylights" &&
-        Array.from({ length: skylightCount }, (_, i) => {
-          const z = skylightMargin + (skylightSpan * i) / (skylightCount - 1);
-          return (
-            <group key={i} position={[0, wallH + 0.16, z]}>
-              <mesh material={flatMaterial(frameColor, 0.5)} castShadow={false}>
-                <boxGeometry args={[skylightW + 0.14, 0.09, 1.04]} />
-              </mesh>
-              <mesh
-                position={[0, 0.05, 0]}
-                rotation={[-Math.PI / 2, 0, 0]}
-                material={windowMaterial(1.8)}
-                castShadow={false}
-              >
-                <planeGeometry args={[skylightW, 0.9]} />
-              </mesh>
-            </group>
-          );
-        })}
+      {roof === "rooflights" &&
+        ([-1, 1] as const).map((s) => (
+          <Rooflight
+            key={s}
+            size={skyS}
+            position={[s * (skyS / 2 + skyGap), wallH + 0.16, depth * 0.34]}
+          />
+        ))}
+
+      {roof === "lantern" && (
+        <Lantern w={lanW} d={lanD} position={[0, wallH + 0.16, depth * 0.45]} />
+      )}
 
       {roof === "pitched" && (
-        <LeanTo
-          w={width}
-          depth={depth}
-          rise={0.85}
-          wallTop={wallH}
-          matId={roofFinish}
-          cheekMatId={material}
-        />
+        <>
+          <LeanTo
+            w={width}
+            depth={depth}
+            rise={PITCH_RISE}
+            wallTop={wallH}
+            matId={roofFinish}
+            cheekMatId={material}
+          />
+          <SlopeRooflights width={width} depth={depth} wallH={wallH} />
+        </>
       )}
 
-      {/* garden-facing glazing */}
+      {/* garden-facing glazed doors */}
       <group position={[0, 0, depth]}>
-        <CBox
-          size={[glassTotal + 0.22, glassH + 0.16, 0.12]}
-          position={[0, glassH / 2 + 0.04, 0]}
-          color={frameColor}
-          castShadow={false}
+        <GlazedUnit
+          unitW={unitW}
+          h={glassH}
+          segments={segments}
+          frameColor={frameColor}
+          handles={glazing === "double"}
         />
-        {Array.from({ length: panelCount }, (_, i) => {
-          const x = -glassTotal / 2 + panelW * (i + 0.5);
-          return (
-            <mesh
-              key={i}
-              position={[x, glassH / 2 + 0.04, 0.065]}
-              material={windowMaterial(1.6)}
-              castShadow={false}
-            >
-              <planeGeometry args={[panelW - 0.08, glassH - 0.12]} />
-            </mesh>
-          );
-        })}
       </group>
 
-      {/* side window on deeper extensions */}
-      {depth >= 5 && (
-        <Win
-          w={1.1}
-          h={1.2}
-          position={[width / 2 + 0.04, 1.6, depth * 0.55]}
-          rotation={[0, Math.PI / 2, 0]}
-          bars={false}
-          frameColor={frameColor}
-        />
-      )}
-
-      {/* warm light spilling onto the patio */}
-      <pointLight
-        position={[0, 1.7, depth + 0.9]}
-        color="#e9b878"
-        intensity={4}
-        distance={6.5}
-        decay={2}
-      />
-
-      {wrap && (
-        <SideReturn
-          wallH={wallH}
-          material={material}
-          frameColor={frameColor}
-          houseWidth={houseWidth}
-          offsetX={offsetX}
-        />
-      )}
+      {/* warm wall lights flanking the doors */}
+      {([-1, 1] as const).map((s) => (
+        <mesh
+          key={s}
+          position={[s * (width / 2 - 0.22), wallH - 0.5, depth + 0.045]}
+          castShadow={false}
+        >
+          <boxGeometry args={[0.09, 0.3, 0.07]} />
+          <meshStandardMaterial
+            color="#2f3236"
+            emissive="#d08a4e"
+            emissiveIntensity={0.75}
+            roughness={0.5}
+          />
+        </mesh>
+      ))}
     </group>
   );
 }
 
-/** Villa wrap-around: side return running along the flank of the house. */
-function SideReturn({
-  wallH,
-  material,
+/**
+ * Glazed door unit with real depth: dim interior at the back, clear glass,
+ * a slim frame around every pane and a proud outer frame around the unit.
+ */
+function GlazedUnit({
+  unitW,
+  h,
+  segments,
   frameColor,
-  houseWidth,
-  offsetX,
+  handles = false,
 }: {
-  wallH: number;
-  material: MaterialId;
+  unitW: number;
+  h: number;
+  segments: number[];
   frameColor: string;
-  houseWidth: number;
-  offsetX: number;
+  handles?: boolean;
 }) {
-  const ref = useRef<THREE.Group>(null);
-  usePopIn(ref, 0.01);
-  const w = 2.2;
-  const len = 5;
-  // flush against the house's outer wall, in world space (undo the group offset)
-  const x = -houseWidth / 2 - w / 2 - offsetX;
+  const frameMat = flatMaterial(frameColor, 0.6);
+  const yMid = h / 2 + 0.02;
+  const outerT = 0.11;
+
+  // pane x-ranges from the segment ratios
+  let acc = -unitW / 2;
+  const panes = segments.map((s) => {
+    const x0 = acc;
+    acc += s * unitW;
+    return [x0, acc] as const;
+  });
+
   return (
-    <group ref={ref} position={[x, 0, -len / 2]}>
-      <TexBox size={[w, wallH, len]} position={[0, wallH / 2, 0]} matId={material} />
-      <CBox
-        size={[w + 0.12, 0.07, len + 0.12]}
-        position={[0, wallH - 0.035, 0]}
-        color="#d8d2c6"
-        castShadow={false}
-      />
-      <CBox
-        size={[w + 0.08, 0.16, len + 0.08]}
-        position={[0, wallH + 0.08, 0]}
-        color="#2e3136"
-      />
-      {[-1.4, 1.4].map((z) => (
-        <group key={z} position={[0, wallH + 0.16, z]}>
-          <mesh material={flatMaterial(frameColor, 0.5)} castShadow={false}>
-            <boxGeometry args={[1.2, 0.09, 0.94]} />
-          </mesh>
+    <group>
+      {/* dim interior behind the whole unit */}
+      <mesh position={[0, yMid, 0.012]} material={interiorMaterial()} castShadow={false}>
+        <planeGeometry args={[unitW, h]} />
+      </mesh>
+
+      {/* proud outer frame — the "double frame" read */}
+      <mesh position={[0, h + 0.04 + outerT / 2, 0.07]} material={frameMat} castShadow={false}>
+        <boxGeometry args={[unitW + outerT * 2, outerT, 0.16]} />
+      </mesh>
+      <mesh position={[0, 0.02, 0.07]} material={frameMat} castShadow={false}>
+        <boxGeometry args={[unitW + outerT * 2, 0.06, 0.16]} />
+      </mesh>
+      {([-1, 1] as const).map((s) => (
+        <mesh
+          key={s}
+          position={[s * (unitW / 2 + outerT / 2), yMid + 0.02, 0.07]}
+          material={frameMat}
+          castShadow={false}
+        >
+          <boxGeometry args={[outerT, h + 0.1, 0.16]} />
+        </mesh>
+      ))}
+
+      {/* panes: clear glass + slim frame per pane, set back from the outer frame */}
+      {panes.map(([x0, x1], i) => {
+        const cx = (x0 + x1) / 2;
+        const pw = x1 - x0;
+        return (
+          <group key={i} position={[cx, yMid, 0]}>
+            <mesh position={[0, 0, 0.055]} material={glassMaterial()} castShadow={false}>
+              <planeGeometry args={[pw - 0.1, h - 0.08]} />
+            </mesh>
+            {/* pane frame */}
+            {([-1, 1] as const).map((s) => (
+              <mesh
+                key={`v${s}`}
+                position={[s * (pw / 2 - 0.028), 0, 0.09]}
+                material={frameMat}
+                castShadow={false}
+              >
+                <boxGeometry args={[0.056, h, 0.07]} />
+              </mesh>
+            ))}
+            {([-1, 1] as const).map((s) => (
+              <mesh
+                key={`h${s}`}
+                position={[0, s * (h / 2 - 0.028), 0.09]}
+                material={frameMat}
+                castShadow={false}
+              >
+                <boxGeometry args={[pw, 0.056, 0.07]} />
+              </mesh>
+            ))}
+          </group>
+        );
+      })}
+
+      {/* slim steel handles on the meeting stiles of the door pair */}
+      {handles &&
+        ([-1, 1] as const).map((s) => (
           <mesh
-            position={[0, 0.05, 0]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            material={windowMaterial(1.8)}
+            key={s}
+            position={[s * 0.09, yMid - 0.12, 0.135]}
+            material={flatMaterial("#9aa0a6", 0.35, 0.7)}
             castShadow={false}
           >
-            <planeGeometry args={[1.05, 0.8]} />
+            <boxGeometry args={[0.028, 0.34, 0.028]} />
+          </mesh>
+        ))}
+    </group>
+  );
+}
+
+/** Thin raised trim around the flat-roof perimeter. */
+function RoofEdgeTrim({ w, d, y, z }: { w: number; d: number; y: number; z: number }) {
+  const mat = flatMaterial("#9aa0a5", 0.6);
+  const t = 0.06;
+  return (
+    <group position={[0, y, z]}>
+      {([-1, 1] as const).map((s) => (
+        <mesh key={`z${s}`} position={[0, 0, (s * (d - t)) / 2]} material={mat} castShadow={false}>
+          <boxGeometry args={[w, 0.05, t]} />
+        </mesh>
+      ))}
+      {([-1, 1] as const).map((s) => (
+        <mesh key={`x${s}`} position={[(s * (w - t)) / 2, 0, 0]} material={mat} castShadow={false}>
+          <boxGeometry args={[t, 0.05, d]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Flat rooflight — black kerb, dim interior, flush clear glass. */
+function Rooflight({
+  size,
+  position,
+}: {
+  size: number;
+  position: [number, number, number];
+}) {
+  const kerb = flatMaterial("#33383d", 0.55);
+  return (
+    <group position={position}>
+      <mesh material={kerb} castShadow={false}>
+        <boxGeometry args={[size + 0.2, 0.13, size + 0.2]} />
+      </mesh>
+      <mesh
+        position={[0, 0.066, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        material={interiorMaterial()}
+        castShadow={false}
+      >
+        <planeGeometry args={[size, size]} />
+      </mesh>
+      <mesh
+        position={[0, 0.08, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        material={glassMaterial()}
+        castShadow={false}
+      >
+        <planeGeometry args={[size, size]} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Rectangular roof lantern — clear glass pyramid on a black upstand. */
+function Lantern({
+  w,
+  d,
+  position,
+}: {
+  w: number;
+  d: number;
+  position: [number, number, number];
+}) {
+  return (
+    <group position={position}>
+      <mesh material={flatMaterial("#33383d", 0.55)} castShadow={false}>
+        <boxGeometry args={[w + 0.18, 0.12, d + 0.18]} />
+      </mesh>
+      <mesh
+        position={[0, 0.062, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        material={interiorMaterial()}
+        castShadow={false}
+      >
+        <planeGeometry args={[w, d]} />
+      </mesh>
+      {/* unit 4-sided pyramid stretched to the rectangular footprint */}
+      <group position={[0, 0.24, 0]} scale={[w, 0.36, d]}>
+        <mesh rotation={[0, Math.PI / 4, 0]} material={glassMaterial()} castShadow={false}>
+          <coneGeometry args={[Math.SQRT1_2, 1, 4]} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+/** Three flat rooflights lying in the lean-to slope. */
+function SlopeRooflights({
+  width,
+  depth,
+  wallH,
+}: {
+  width: number;
+  depth: number;
+  wallH: number;
+}) {
+  const run = depth + 0.15;
+  const theta = Math.atan2(PITCH_RISE, run);
+  const z = depth * 0.45;
+  const y = wallH + PITCH_RISE * (1 - z / run) + 0.06;
+  const spread = width * 0.28;
+  const kerb = flatMaterial("#22262b", 0.55);
+  return (
+    <>
+      {[-spread, 0, spread].map((x) => (
+        <group key={x} position={[x, y, z]} rotation={[theta, 0, 0]}>
+          <mesh material={kerb} castShadow={false}>
+            <boxGeometry args={[0.95, 0.08, 0.75]} />
+          </mesh>
+          <mesh
+            position={[0, 0.041, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            material={interiorMaterial()}
+            castShadow={false}
+          >
+            <planeGeometry args={[0.85, 0.65]} />
+          </mesh>
+          <mesh
+            position={[0, 0.055, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            material={glassMaterial()}
+            castShadow={false}
+          >
+            <planeGeometry args={[0.85, 0.65]} />
           </mesh>
         </group>
       ))}
-      <Win
-        w={1}
-        h={1.3}
-        position={[-w / 2 - 0.04, 1.55, 0.8]}
-        rotation={[0, -Math.PI / 2, 0]}
-        bars={false}
-        frameColor={frameColor}
-      />
-    </group>
+    </>
   );
 }

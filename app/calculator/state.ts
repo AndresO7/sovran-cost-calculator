@@ -4,20 +4,16 @@ import {
   GlazingId,
   LoftFinishId,
   LoftTypeId,
-  LOFT_SWAP,
   MaterialId,
   PatioId,
-  PROTOTYPES,
-  PrototypeId,
   SizeId,
 } from "./config";
 
 export type TabId = "ground" | "loft";
 
 export interface CalculatorState {
-  /** false until the intro questions are answered */
+  /** false until the intro question is answered */
   started: boolean;
-  prototype: PrototypeId;
   ground: {
     size: SizeId;
     material: MaterialId;
@@ -36,12 +32,11 @@ export interface CalculatorState {
 
 export const initialState: CalculatorState = {
   started: false,
-  prototype: "townhouse",
   ground: {
     size: "M",
-    material: "redBrick",
-    roof: "skylights",
-    glazing: "french",
+    material: "render",
+    roof: "rooflights",
+    glazing: "bifold",
     frame: "anthracite",
     patio: "york",
   },
@@ -51,8 +46,7 @@ export const initialState: CalculatorState = {
 };
 
 export type CalculatorAction =
-  | { type: "BEGIN"; prototype: PrototypeId; focus: "ground" | "loft" | "both" }
-  | { type: "SET_PROTOTYPE"; prototype: PrototypeId }
+  | { type: "BEGIN"; focus: "ground" | "loft" | "both" }
   | { type: "SET_SIZE"; size: SizeId }
   | { type: "SET_MATERIAL"; material: MaterialId }
   | { type: "SET_EXT_ROOF"; roof: ExtRoofId }
@@ -70,27 +64,13 @@ export function reducer(
 ): CalculatorState {
   switch (action.type) {
     case "BEGIN": {
-      // loft-led projects open on the Loft tab with a dormer pre-selected
+      // loft-led projects open on the Loft tab with a box dormer pre-selected
       const wantsLoft = action.focus !== "ground";
       return {
         ...state,
         started: true,
-        prototype: action.prototype,
-        loft: { ...state.loft, type: wantsLoft ? "dormer" : "none" },
+        loft: { ...state.loft, type: wantsLoft ? "boxDormer" : "none" },
         activeTab: action.focus === "loft" ? "loft" : "ground",
-      };
-    }
-    case "SET_PROTOTYPE": {
-      if (action.prototype === state.prototype) return state;
-      const allowed = PROTOTYPES[action.prototype].loftTypes;
-      let loftType = state.loft.type;
-      if (!allowed.includes(loftType)) {
-        loftType = LOFT_SWAP[loftType] ?? "none";
-      }
-      return {
-        ...state,
-        prototype: action.prototype,
-        loft: { ...state.loft, type: loftType },
       };
     }
     case "SET_SIZE":

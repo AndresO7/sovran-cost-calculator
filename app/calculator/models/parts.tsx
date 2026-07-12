@@ -5,9 +5,10 @@ import * as THREE from "three";
 import {
   AnyMaterialId,
   flatMaterial,
+  glassMaterial,
+  interiorMaterial,
   metricMaterial,
   TILE_METRES,
-  windowMaterial,
 } from "./materials";
 
 /* ---------------------------------- hooks ---------------------------------- */
@@ -72,6 +73,7 @@ interface CBoxProps {
   size: [number, number, number];
   position: [number, number, number];
   color: string;
+  rotation?: [number, number, number];
   roughness?: number;
   metalness?: number;
   castShadow?: boolean;
@@ -82,6 +84,7 @@ export function CBox({
   size,
   position,
   color,
+  rotation = [0, 0, 0],
   roughness = 0.85,
   metalness = 0,
   castShadow = true,
@@ -89,6 +92,7 @@ export function CBox({
   return (
     <mesh
       position={position}
+      rotation={rotation}
       material={flatMaterial(color, roughness, metalness)}
       castShadow={castShadow}
       receiveShadow
@@ -107,37 +111,61 @@ interface WinProps {
   rotation?: [number, number, number];
   /** georgian glazing bars */
   bars?: boolean;
-  intensity?: number;
+  /** central vertical mullion splitting the unit into a pair */
+  mullion?: boolean;
   /** surround/frame colour — pale sash by default, joinery colour on new-build */
   frameColor?: string;
+  /** protruding stone head + cill, traditional brick facades */
+  stone?: boolean;
 }
 
-/** A lit sash window with a pale surround — emissive Monolith Noir gold. */
+/** A sash window: frame, dim interior and clear glass set in front of it. */
 export function Win({
   w,
   h,
   position,
   rotation = [0, 0, 0],
   bars = true,
-  intensity = 1.5,
-  frameColor = "#d8d2c6",
+  mullion = false,
+  frameColor = "#ece7db",
+  stone = false,
 }: WinProps) {
   const frame = flatMaterial(frameColor, 0.85);
+  const stoneMat = flatMaterial("#d9d2c2", 0.9);
   return (
     <group position={position} rotation={rotation}>
       <mesh material={frame} castShadow={false}>
         <boxGeometry args={[w + 0.16, h + 0.16, 0.07]} />
       </mesh>
-      <mesh position={[0, 0, 0.045]} material={windowMaterial(intensity)} castShadow={false}>
+      {/* dim interior behind the glazing gives the glass depth */}
+      <mesh position={[0, 0, 0.037]} material={interiorMaterial()} castShadow={false}>
+        <planeGeometry args={[w, h]} />
+      </mesh>
+      <mesh position={[0, 0, 0.062]} material={glassMaterial()} castShadow={false}>
         <planeGeometry args={[w, h]} />
       </mesh>
       {bars && (
         <>
-          <mesh position={[0, 0, 0.055]} material={frame} castShadow={false}>
-            <boxGeometry args={[0.035, h, 0.012]} />
+          <mesh position={[0, 0, 0.07]} material={frame} castShadow={false}>
+            <boxGeometry args={[0.035, h, 0.014]} />
           </mesh>
-          <mesh position={[0, 0, 0.055]} material={frame} castShadow={false}>
-            <boxGeometry args={[w, 0.035, 0.012]} />
+          <mesh position={[0, 0, 0.07]} material={frame} castShadow={false}>
+            <boxGeometry args={[w, 0.035, 0.014]} />
+          </mesh>
+        </>
+      )}
+      {mullion && (
+        <mesh position={[0, 0, 0.07]} material={frame} castShadow={false}>
+          <boxGeometry args={[0.07, h, 0.016]} />
+        </mesh>
+      )}
+      {stone && (
+        <>
+          <mesh position={[0, h / 2 + 0.14, 0.03]} material={stoneMat} castShadow>
+            <boxGeometry args={[w + 0.3, 0.13, 0.13]} />
+          </mesh>
+          <mesh position={[0, -h / 2 - 0.12, 0.04]} material={stoneMat} castShadow>
+            <boxGeometry args={[w + 0.34, 0.09, 0.16]} />
           </mesh>
         </>
       )}
@@ -151,10 +179,10 @@ export function Chimney({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
       <TexBox size={[0.85, 1.15, 0.55]} position={[0, 0.575, 0]} matId="houseBrick" />
-      <mesh position={[-0.2, 1.32, 0]} material={flatMaterial("#5a4439", 0.9)} castShadow>
+      <mesh position={[-0.2, 1.32, 0]} material={flatMaterial("#b0603f", 0.9)} castShadow>
         <cylinderGeometry args={[0.09, 0.11, 0.35, 10]} />
       </mesh>
-      <mesh position={[0.2, 1.32, 0]} material={flatMaterial("#5a4439", 0.9)} castShadow>
+      <mesh position={[0.2, 1.32, 0]} material={flatMaterial("#b0603f", 0.9)} castShadow>
         <cylinderGeometry args={[0.09, 0.11, 0.35, 10]} />
       </mesh>
     </group>
@@ -246,69 +274,6 @@ export function Roof({ w, d, h, hipL = 0, hipR = 0, finish, position }: RoofProp
   return <mesh geometry={geometry} material={material} position={position} castShadow receiveShadow />;
 }
 
-/** Vertical triangular gable infill for a gabled roof end (x = ±w/2 plane). */
-export function GableWall({
-  side,
-  w,
-  d,
-  h,
-  matId,
-  position,
-}: {
-  side: 1 | -1;
-  w: number;
-  d: number;
-  h: number;
-  matId: AnyMaterialId;
-  position: [number, number, number];
-}) {
-  const geometry = useMemo(() => {
-    const x = (side * w) / 2;
-    const positions = [x, 0, -d / 2, x, 0, d / 2, x, h, 0];
-    const uvs = [0, 0, d / TILE_METRES, 0, d / 2 / TILE_METRES, h / TILE_METRES];
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
-    geo.computeVertexNormals();
-    return geo;
-  }, [side, w, d, h]);
-  const material = useMemo(() => {
-    const m = metricMaterial(matId, TILE_METRES, TILE_METRES).clone();
-    m.side = THREE.DoubleSide;
-    return m;
-  }, [matId]);
-  return <mesh geometry={geometry} material={material} position={position} castShadow receiveShadow />;
-}
-
-/** Vertical triangular gable infill on a z-plane (front/back facing). */
-export function GableWallZ({
-  w,
-  h,
-  matId,
-  position,
-}: {
-  w: number;
-  h: number;
-  matId: AnyMaterialId;
-  position: [number, number, number];
-}) {
-  const geometry = useMemo(() => {
-    const positions = [-w / 2, 0, 0, w / 2, 0, 0, 0, h, 0];
-    const uvs = [0, 0, w / TILE_METRES, 0, w / 2 / TILE_METRES, h / TILE_METRES];
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
-    geo.computeVertexNormals();
-    return geo;
-  }, [w, h]);
-  const material = useMemo(() => {
-    const m = metricMaterial(matId, TILE_METRES, TILE_METRES).clone();
-    m.side = THREE.DoubleSide;
-    return m;
-  }, [matId]);
-  return <mesh geometry={geometry} material={material} position={position} castShadow receiveShadow />;
-}
-
 /**
  * Single-pitch lean-to roof for the pitched extension option.
  * High edge against the house (z=0), falling to the rear (z=depth).
@@ -388,3 +353,38 @@ export function LeanTo({
     </group>
   );
 }
+
+/** Vertical triangular gable infill for a gabled roof end (x = ±w/2 plane). */
+export function GableWall({
+  side,
+  w,
+  d,
+  h,
+  matId,
+  position,
+}: {
+  side: 1 | -1;
+  w: number;
+  d: number;
+  h: number;
+  matId: AnyMaterialId;
+  position: [number, number, number];
+}) {
+  const geometry = useMemo(() => {
+    const x = (side * w) / 2;
+    const positions = [x, 0, -d / 2, x, 0, d / 2, x, h, 0];
+    const uvs = [0, 0, d / TILE_METRES, 0, d / 2 / TILE_METRES, h / TILE_METRES];
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    geo.computeVertexNormals();
+    return geo;
+  }, [side, w, d, h]);
+  const material = useMemo(() => {
+    const m = metricMaterial(matId, TILE_METRES, TILE_METRES).clone();
+    m.side = THREE.DoubleSide;
+    return m;
+  }, [matId]);
+  return <mesh geometry={geometry} material={material} position={position} castShadow receiveShadow />;
+}
+

@@ -15,7 +15,7 @@ import {
   MaterialId,
   PATIOS,
   PatioId,
-  PROTOTYPES,
+  SIZES,
   SizeId,
 } from "../config";
 import { CalculatorAction, CalculatorState, TabId } from "../state";
@@ -34,10 +34,8 @@ import {
 
 const LOFT_ICONS: Record<LoftTypeId, React.ReactNode> = {
   none: Icons.loftNone,
-  velux: Icons.velux,
-  dormer: Icons.dormer,
-  mansard: Icons.mansard,
-  hipToGable: Icons.hipToGable,
+  boxDormer: Icons.boxDormer,
+  mansardDormer: Icons.mansardDormer,
 };
 
 export function ConfigPanel({
@@ -47,7 +45,6 @@ export function ConfigPanel({
   state: CalculatorState;
   dispatch: React.Dispatch<CalculatorAction>;
 }) {
-  const proto = PROTOTYPES[state.prototype];
   const tab = state.activeTab;
 
   return (
@@ -110,7 +107,7 @@ export function ConfigPanel({
 
       {/* scrollable options */}
       <div
-        key={`${state.prototype}-${tab}`}
+        key={tab}
         className="calc-panel-scroll"
         style={{
           flex: 1,
@@ -123,11 +120,11 @@ export function ConfigPanel({
           <>
             <Section index="01" label="Extension size">
               <SizePicker
-                options={(Object.keys(proto.sizes) as SizeId[]).map((id) => ({
+                options={(Object.keys(SIZES) as SizeId[]).map((id) => ({
                   id,
-                  label: proto.sizes[id].label,
-                  description: proto.sizes[id].description,
-                  area: proto.sizes[id].area,
+                  label: SIZES[id].label,
+                  description: SIZES[id].description,
+                  area: SIZES[id].area,
                 }))}
                 value={state.ground.size}
                 onChange={(id) => dispatch({ type: "SET_SIZE", size: id as SizeId })}
@@ -161,7 +158,7 @@ export function ConfigPanel({
               />
             </Section>
 
-            <Section index="04" label="Garden glazing">
+            <Section index="04" label="Garden doors">
               <OptionGrid
                 options={(Object.keys(GLAZING) as GlazingId[]).map((id) => ({
                   id,
@@ -204,8 +201,7 @@ export function ConfigPanel({
           <>
             <Section index="01" label="Loft conversion">
               <OptionGrid
-                columns={2}
-                options={proto.loftTypes.map((id) => ({
+                options={(Object.keys(LOFT_TYPES) as LoftTypeId[]).map((id) => ({
                   id,
                   label: LOFT_TYPES[id].label,
                   price: LOFT_TYPES[id].price,
@@ -240,8 +236,8 @@ export function ConfigPanel({
                   marginTop: 12,
                 }}
               >
-                Applied across the entire roof — main slopes, loft and pitched
-                extension.
+                Applied across the entire roof — main slopes and dormer
+                cladding.
               </p>
             </Section>
           </>

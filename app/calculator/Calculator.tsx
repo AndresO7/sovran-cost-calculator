@@ -3,11 +3,11 @@
 import { Component, ReactNode, useEffect, useMemo, useReducer, useRef } from "react";
 import dynamic from "next/dynamic";
 import gsap from "gsap";
-import { PROTOTYPES } from "./config";
+import { HOUSE, SIZES } from "./config";
 import { calculatePrice } from "./pricing";
 import { CalculatorState, initialState, reducer } from "./state";
 import { ConfigPanel } from "./ui/ConfigPanel";
-import { ACCENT, FAINT, microLabel, MUTED } from "./ui/controls";
+import { microLabel } from "./ui/controls";
 import { QuoteModal } from "./ui/QuoteModal";
 import { SiteNav } from "./ui/SiteNav";
 import { StartScreen } from "./ui/StartScreen";
@@ -40,11 +40,11 @@ export default function Calculator() {
       <SiteNav />
       {state.started ? (
         <>
-          <TopBar state={state} price={price} dispatch={dispatch} />
+          <TopBar price={price} dispatch={dispatch} />
           <div className="calc-body">
             <div
               className="calc-viewport"
-              style={{ position: "relative", background: "var(--background)" }}
+              style={{ position: "relative", background: "#efe9dd" }}
             >
               <SceneBoundary>
                 <Scene state={state} />
@@ -63,9 +63,12 @@ export default function Calculator() {
 }
 
 /** Architectural overlays: corner ticks, plot data, ghost wordmark, hint. */
+const INK = "rgba(52, 46, 38, 0.6)";
+const INK_FAINT = "rgba(52, 46, 38, 0.42)";
+const BRONZE = "#8a6b3a";
+
 function ViewportDressing({ state }: { state: CalculatorState }) {
-  const proto = PROTOTYPES[state.prototype];
-  const size = proto.sizes[state.ground.size];
+  const size = SIZES[state.ground.size];
   const inset = "clamp(14px, 1.8vw, 26px)";
   const tick = (pos: React.CSSProperties) => (
     <span
@@ -74,7 +77,7 @@ function ViewportDressing({ state }: { state: CalculatorState }) {
         position: "absolute",
         width: 14,
         height: 14,
-        borderColor: "rgba(201,169,110,0.4)",
+        borderColor: "rgba(138, 107, 58, 0.45)",
         borderStyle: "solid",
         pointerEvents: "none",
         ...pos,
@@ -96,14 +99,14 @@ function ViewportDressing({ state }: { state: CalculatorState }) {
           left: `calc(${inset} + 18px)`,
         }}
       >
-        <div style={{ ...microLabel, color: "rgba(239,233,225,0.55)" }}>{proto.label}</div>
+        <div style={{ ...microLabel, color: INK }}>{HOUSE.label}</div>
         <div
           style={{
             fontFamily: "var(--font-bodoni)",
             fontStyle: "italic",
             fontWeight: 400,
             fontSize: "clamp(13px, 1.1vw, 16px)",
-            color: ACCENT,
+            color: BRONZE,
             marginTop: 5,
             letterSpacing: "0.06em",
           }}
@@ -123,7 +126,7 @@ function ViewportDressing({ state }: { state: CalculatorState }) {
           fontWeight: 500,
           fontSize: "clamp(34px, 4.5vw, 64px)",
           letterSpacing: "0.16em",
-          color: "rgba(239,233,225,0.05)",
+          color: "rgba(52, 46, 38, 0.07)",
           lineHeight: 1,
           userSelect: "none",
         }}
@@ -138,6 +141,7 @@ function ViewportDressing({ state }: { state: CalculatorState }) {
           bottom: `calc(${inset} + 8px)`,
           ...microLabel,
           fontSize: 9,
+          color: INK_FAINT,
         }}
       >
         Drag to orbit · Scroll to zoom
@@ -157,7 +161,7 @@ function SceneFallback({ message }: { message: string }) {
         alignItems: "center",
         justifyContent: "center",
         gap: 18,
-        color: MUTED,
+        color: INK,
       }}
     >
       <div
@@ -165,12 +169,12 @@ function SceneFallback({ message }: { message: string }) {
           width: 34,
           height: 34,
           borderRadius: "50%",
-          border: "1px solid rgba(201,169,110,0.25)",
-          borderTopColor: ACCENT,
+          border: "1px solid rgba(138,107,58,0.3)",
+          borderTopColor: BRONZE,
           animation: "spin 0.9s linear infinite",
         }}
       />
-      <span style={{ ...microLabel, color: FAINT }}>{message}</span>
+      <span style={{ ...microLabel, color: INK_FAINT }}>{message}</span>
     </div>
   );
 }
@@ -201,7 +205,7 @@ class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean
               fontWeight: 300,
               fontSize: 14,
               lineHeight: 1.75,
-              color: MUTED,
+              color: INK,
               maxWidth: 380,
             }}
           >

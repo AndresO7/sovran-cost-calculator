@@ -355,19 +355,19 @@ const S: CSSProperties = { display: "block" };
 const stroke = { stroke: "currentColor", strokeWidth: 1.2, fill: "none" } as const;
 
 export const Icons = {
-  flat: (
+  rooflights: (
     <svg width="34" height="26" viewBox="0 0 34 26" style={S}>
       <rect x="4" y="8" width="26" height="14" {...stroke} />
       <line x1="2" y1="8" x2="32" y2="8" {...stroke} />
+      <rect x="8" y="4" width="6" height="3" {...stroke} />
+      <rect x="20" y="4" width="6" height="3" {...stroke} />
     </svg>
   ),
-  skylights: (
+  lantern: (
     <svg width="34" height="26" viewBox="0 0 34 26" style={S}>
       <rect x="4" y="8" width="26" height="14" {...stroke} />
       <line x1="2" y1="8" x2="32" y2="8" {...stroke} />
-      <rect x="8" y="4" width="5" height="3" {...stroke} />
-      <rect x="15" y="4" width="5" height="3" {...stroke} />
-      <rect x="22" y="4" width="5" height="3" {...stroke} />
+      <path d="M11 8 L17 3 L23 8" {...stroke} />
     </svg>
   ),
   pitched: (
@@ -375,12 +375,14 @@ export const Icons = {
       <rect x="4" y="11" width="26" height="11" {...stroke} />
       <path d="M4 4 L30 11" {...stroke} />
       <line x1="4" y1="4" x2="4" y2="11" {...stroke} />
+      <rect x="12" y="5" width="4.6" height="3" transform="rotate(15 14 6.5)" {...stroke} />
     </svg>
   ),
-  french: (
+  double: (
     <svg width="34" height="26" viewBox="0 0 34 26" style={S}>
       <rect x="11" y="3" width="6" height="20" {...stroke} />
       <rect x="17" y="3" width="6" height="20" {...stroke} />
+      <line x1="4" y1="23" x2="30" y2="23" {...stroke} />
     </svg>
   ),
   sliding: (
@@ -403,35 +405,20 @@ export const Icons = {
       <rect x="8" y="13" width="18" height="9" {...stroke} />
     </svg>
   ),
-  velux: (
+  boxDormer: (
     <svg width="34" height="26" viewBox="0 0 34 26" style={S}>
       <path d="M5 13 L17 4 L29 13" {...stroke} />
       <rect x="8" y="13" width="18" height="9" {...stroke} />
-      <rect x="11" y="7.2" width="4" height="3.4" transform="rotate(-37 13 9)" {...stroke} />
-      <rect x="19" y="7.2" width="4" height="3.4" transform="rotate(-37 21 9)" {...stroke} />
+      <rect x="12" y="6" width="10" height="7" {...stroke} />
+      <line x1="12" y1="6" x2="22" y2="6" {...stroke} />
     </svg>
   ),
-  dormer: (
-    <svg width="34" height="26" viewBox="0 0 34 26" style={S}>
-      <path d="M5 13 L17 4 L29 13" {...stroke} />
-      <rect x="8" y="13" width="18" height="9" {...stroke} />
-      <rect x="13" y="6.5" width="8" height="6.5" {...stroke} />
-      <line x1="13" y1="6.5" x2="21" y2="6.5" {...stroke} />
-    </svg>
-  ),
-  mansard: (
+  mansardDormer: (
     <svg width="34" height="26" viewBox="0 0 34 26" style={S}>
       <path d="M6 13 L9 4 L25 4 L28 13" {...stroke} />
       <rect x="8" y="13" width="18" height="9" {...stroke} />
       <rect x="12" y="6.5" width="3.4" height="4" {...stroke} />
       <rect x="18.5" y="6.5" width="3.4" height="4" {...stroke} />
-    </svg>
-  ),
-  hipToGable: (
-    <svg width="34" height="26" viewBox="0 0 34 26" style={S}>
-      <path d="M5 13 L11 4 L29 4 L29 13" {...stroke} />
-      <rect x="8" y="13" width="18" height="9" {...stroke} />
-      <rect x="23" y="6.5" width="4" height="4.5" {...stroke} />
     </svg>
   ),
 } satisfies Record<string, ReactNode>;

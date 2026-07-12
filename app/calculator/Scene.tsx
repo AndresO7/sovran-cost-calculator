@@ -1,16 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import * as THREE from "three";
-import { Townhouse } from "./models/Townhouse";
-import { Villa } from "./models/Villa";
+import { House } from "./models/House";
 import { CalculatorState } from "./state";
 
 /**
- * The architect's-model viewport: deep #0a0a0a studio, warm key light,
- * cool rim, gold-lit windows. Client-only (loaded with ssr: false).
+ * The architect's-model viewport: soft daylight on a warm cream studio,
+ * gentle sun with cool sky fill. Client-only (loaded with ssr: false).
  */
 export default function Scene({ state }: { state: CalculatorState }) {
   const [interacted, setInteracted] = useState(false);
@@ -19,18 +17,18 @@ export default function Scene({ state }: { state: CalculatorState }) {
     <Canvas
       shadows
       dpr={[1, 2]}
-      camera={{ position: [11.5, 7, 12.5], fov: 36 }}
+      camera={{ position: [13.5, 8.5, 14.5], fov: 36 }}
       gl={{ antialias: true }}
     >
-      <color attach="background" args={["#0d0c0a"]} />
-      <fog attach="fog" args={["#0d0c0a", 24, 52]} />
+      <color attach="background" args={["#efe9dd"]} />
+      <fog attach="fog" args={["#efe9dd", 34, 75]} />
 
-      <hemisphereLight args={["#454a5e", "#1a1612", 0.75]} />
-      {/* key — warm, raking across the garden elevation */}
+      <hemisphereLight args={["#e8f0f8", "#cfc5b2", 0.95]} />
+      {/* sun — warm, raking across the garden elevation */}
       <directionalLight
-        position={[9, 12, 7]}
-        intensity={1.7}
-        color="#ffe2c2"
+        position={[12, 16, 9]}
+        intensity={2.1}
+        color="#fff1dd"
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -38,24 +36,18 @@ export default function Scene({ state }: { state: CalculatorState }) {
         shadow-camera-right={15}
         shadow-camera-top={15}
         shadow-camera-bottom={-15}
-        shadow-camera-far={45}
+        shadow-camera-far={50}
         shadow-bias={-0.0004}
       />
       {/* front fill — lifts the street facade when orbiting round */}
-      <directionalLight position={[4, 7, -12]} intensity={0.9} color="#e6d8c3" />
-      {/* side fill — cool wash on the left flank */}
-      <directionalLight position={[-12, 6, -2]} intensity={0.6} color="#9fb0d8" />
+      <directionalLight position={[4, 7, -12]} intensity={0.65} color="#f4ecdd" />
+      {/* side fill — cool sky wash on the left flank */}
+      <directionalLight position={[-12, 6, -2]} intensity={0.45} color="#dfe8f2" />
 
-      {state.prototype === "townhouse" ? (
-        <Townhouse key="townhouse" state={state} />
-      ) : (
-        <Villa key="villa" state={state} />
-      )}
-
-      <GlowDisc />
+      <House state={state} />
 
       <OrbitControls
-        target={[0, 2.8, -1]}
+        target={[0, 2.4, -1]}
         autoRotate={!interacted}
         autoRotateSpeed={0.45}
         enableDamping
@@ -68,45 +60,5 @@ export default function Scene({ state }: { state: CalculatorState }) {
         onStart={() => setInteracted(true)}
       />
     </Canvas>
-  );
-}
-
-/** Faint warm radial pool of light beneath the plinth, seats the model. */
-function GlowDisc() {
-  const texture = useMemo(() => {
-    const size = 256;
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d")!;
-    const grad = ctx.createRadialGradient(
-      size / 2,
-      size / 2,
-      0,
-      size / 2,
-      size / 2,
-      size / 2
-    );
-    grad.addColorStop(0, "rgba(201, 169, 110, 0.55)");
-    grad.addColorStop(0.45, "rgba(201, 169, 110, 0.14)");
-    grad.addColorStop(1, "rgba(201, 169, 110, 0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, size, size);
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    return tex;
-  }, []);
-
-  return (
-    <mesh position={[0, -0.58, -1]} rotation={[-Math.PI / 2, 0, 0]}>
-      <circleGeometry args={[17, 48]} />
-      <meshBasicMaterial
-        map={texture}
-        transparent
-        opacity={0.4}
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-      />
-    </mesh>
   );
 }

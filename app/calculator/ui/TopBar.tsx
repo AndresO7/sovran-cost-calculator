@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
-import { PROTOTYPES, PrototypeId } from "../config";
+import { HOUSE } from "../config";
 import { formatPrice, PriceRange } from "../pricing";
-import { CalculatorAction, CalculatorState } from "../state";
+import { CalculatorAction } from "../state";
 import { ACCENT, Arrow, arrowButton, FG, LINE, microLabel, MUTED } from "./controls";
 
 function useCountUp(value: number): number {
@@ -24,13 +24,11 @@ function useCountUp(value: number): number {
   return display;
 }
 
-/** Sub-toolbar under the site nav: prototype tabs · live estimate · CTA. */
+/** Sub-toolbar under the site nav: property label · live estimate · CTA. */
 export function TopBar({
-  state,
   price,
   dispatch,
 }: {
-  state: CalculatorState;
   price: PriceRange;
   dispatch: React.Dispatch<CalculatorAction>;
 }) {
@@ -56,36 +54,35 @@ export function TopBar({
       <span style={{ ...microLabel, whiteSpace: "nowrap" }}>Configure</span>
       <span aria-hidden style={{ width: 1, height: 22, background: LINE }} />
 
-      {/* prototype selector */}
-      <nav style={{ display: "flex", gap: "clamp(14px, 1.8vw, 30px)" }}>
-        {(Object.keys(PROTOTYPES) as PrototypeId[]).map((id) => {
-          const active = id === state.prototype;
-          return (
-            <button
-              key={id}
-              onClick={() => dispatch({ type: "SET_PROTOTYPE", prototype: id })}
-              aria-pressed={active}
-              style={{
-                fontFamily: "var(--font-outfit)",
-                fontWeight: active ? 400 : 300,
-                fontSize: "clamp(10px, 0.8vw, 11.5px)",
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                color: active ? FG : MUTED,
-                background: "transparent",
-                border: "none",
-                borderBottom: `1px solid ${active ? ACCENT : "transparent"}`,
-                padding: "8px 2px 6px",
-                cursor: "pointer",
-                transition: "all 0.35s ease",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {PROTOTYPES[id].label}
-            </button>
-          );
-        })}
-      </nav>
+      {/* host property */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+        <span
+          style={{
+            fontFamily: "var(--font-outfit)",
+            fontWeight: 400,
+            fontSize: "clamp(10px, 0.8vw, 11.5px)",
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            color: FG,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {HOUSE.label}
+        </span>
+        <span
+          style={{
+            fontFamily: "var(--font-outfit)",
+            fontWeight: 300,
+            fontSize: "clamp(9px, 0.7vw, 10.5px)",
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: MUTED,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {HOUSE.sub}
+        </span>
+      </div>
 
       <div style={{ flex: 1 }} />
 

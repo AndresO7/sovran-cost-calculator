@@ -1,0 +1,163 @@
+import { useRef } from "react";
+import * as THREE from "three";
+import { HOUSE, SIZES } from "../config";
+import { CalculatorState } from "../state";
+import { Extension } from "./Extension";
+import { Garden } from "./Garden";
+import { Loft } from "./Loft";
+import { CBox, GableWall, Roof, TexBox, usePopIn, Win } from "./parts";
+
+const W = HOUSE.w;
+const D = HOUSE.d; // house z: -D → 0, garden grows +z
+const WALL_H = 5.6; // two storeys
+const ROOF_H = 2.5;
+const OVER = 0.18;
+
+/** Brick semi — two storeys, gabled roof. Hosts the extension and loft. */
+export function House({ state }: { state: CalculatorState }) {
+  const ref = useRef<THREE.Group>(null);
+  usePopIn(ref, 0.94);
+  const size = SIZES[state.ground.size];
+
+  return (
+    <group ref={ref}>
+      {/* main body */}
+      <TexBox size={[W, WALL_H, D]} position={[0, WALL_H / 2, -D / 2]} matId="houseBrick" />
+
+      {/* eaves fascia — front and rear gutter lines only, gables stay clean */}
+      {([-1, 1] as const).map((s) => (
+        <CBox
+          key={s}
+          size={[W + 0.16, 0.14, 0.2]}
+          position={[0, WALL_H - 0.07, s === 1 ? 0.04 : -D - 0.04]}
+          color="#eae5d9"
+          castShadow={false}
+        />
+      ))}
+
+      {/* gabled roof + brick gable ends + ridge cap + chimney */}
+      <Roof
+        w={W + OVER * 2}
+        d={D + OVER * 2}
+        h={ROOF_H}
+        finish={state.loft.finish}
+        position={[0, WALL_H, -D / 2]}
+      />
+      {([-1, 1] as const).map((s) => (
+        <GableWall
+          key={s}
+          side={s}
+          w={W - 0.02}
+          d={D}
+          h={ROOF_H}
+          matId="houseBrick"
+          position={[0, WALL_H, -D / 2]}
+        />
+      ))}
+      <CBox
+        size={[W + OVER * 2 + 0.06, 0.09, 0.2]}
+        position={[0, WALL_H + ROOF_H + 0.02, -D / 2]}
+        color="#59606a"
+        castShadow={false}
+      />
+      {/* pale bargeboards frame the roof edge at each gable */}
+      {([-1, 1] as const).map((sx) =>
+        ([-1, 1] as const).map((sz) => {
+          const halfD = D / 2 + OVER;
+          const pitch = Math.atan2(ROOF_H, halfD);
+          const len = Math.hypot(halfD, ROOF_H) + 0.15;
+          return (
+            <CBox
+              key={`${sx}${sz}`}
+              size={[0.08, 0.17, len]}
+              position={[
+                sx * (W / 2 + OVER - 0.02),
+                WALL_H + ROOF_H / 2 - 0.02,
+                -D / 2 + (sz * halfD) / 2,
+              ]}
+              rotation={[sz * pitch, 0, 0]}
+              color="#e8e3d7"
+              castShadow={false}
+            />
+          );
+        })
+      )}
+
+      {/* rear sash windows — first floor, above the extension */}
+      {[-1.55, 1.55].map((x) => (
+        <Win key={x} w={0.95} h={1.4} stone position={[x, 4.25, 0.045]} />
+      ))}
+
+      {/* front facade */}
+      <group position={[0, 0, -D]} rotation={[0, Math.PI, 0]}>
+        <FrontDoor x={-1.7} />
+        {/* ground-floor window */}
+        <Win w={1.7} h={1.45} stone position={[1.35, 1.55, 0.045]} />
+        {/* first-floor windows */}
+        <Win w={0.95} h={1.35} stone position={[-1.7, 4.25, 0.045]} />
+        <Win w={1.45} h={1.35} stone position={[1.35, 4.25, 0.045]} />
+      </group>
+
+      {/* configurable pieces */}
+      <Extension
+        width={size.w}
+        depth={size.d}
+        material={state.ground.material}
+        roof={state.ground.roof}
+        glazing={state.ground.glazing}
+        frame={state.ground.frame}
+        roofFinish={state.loft.finish}
+      />
+      <Loft
+        type={state.loft.type}
+        finish={state.loft.finish}
+        roofW={W + OVER * 2}
+        slopeHalfD={(D + OVER * 2) / 2}
+        eaveY={WALL_H}
+        rise={ROOF_H}
+        rearEaveZ={-D / 2 + (D + OVER * 2) / 2}
+      />
+
+      <Garden
+        houseW={W}
+        houseD={D}
+        patio={state.ground.patio}
+        ext={{ w: size.w, d: size.d }}
+      />
+    </group>
+  );
+}
+
+/** Panelled black door with stone surround, brass furniture and steps. */
+function FrontDoor({ x }: { x: number }) {
+  const stone = "#d9d2c2";
+  return (
+    <group position={[x, 0, 0]}>
+      {/* stone jambs + head */}
+      {([-1, 1] as const).map((s) => (
+        <CBox key={s} size={[0.14, 2.24, 0.14]} position={[s * 0.56, 1.2, 0.05]} color={stone} />
+      ))}
+      <CBox size={[1.26, 0.15, 0.16]} position={[0, 2.36, 0.05]} color={stone} />
+      {/* door leaf */}
+      <CBox size={[0.98, 2.12, 0.1]} position={[0, 1.14, 0.04]} color="#1e2124" />
+      {/* recessed panels */}
+      {[0.62, 1.62].map((y) =>
+        ([-1, 1] as const).map((s) => (
+          <CBox
+            key={`${y}-${s}`}
+            size={[0.32, 0.62, 0.02]}
+            position={[s * 0.21, y, 0.095]}
+            color="#26292d"
+            castShadow={false}
+          />
+        ))
+      )}
+      {/* brass handle + letter plate */}
+      <CBox size={[0.05, 0.16, 0.05]} position={[0.36, 1.1, 0.11]} color="#b98a3f" castShadow={false} />
+      <CBox size={[0.24, 0.05, 0.03]} position={[0, 0.98, 0.1]} color="#b98a3f" castShadow={false} />
+      {/* steps */}
+      <CBox size={[1.3, 0.16, 0.5]} position={[0, 0.08, 0.3]} color="#c9c2b2" />
+      <CBox size={[1.5, 0.08, 0.7]} position={[0, 0.04, 0.42]} color="#bdb6a6" />
+    </group>
+  );
+}

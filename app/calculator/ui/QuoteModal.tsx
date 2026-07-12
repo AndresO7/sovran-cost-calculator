@@ -5,11 +5,12 @@ import {
   EXT_ROOFS,
   FRAMES,
   GLAZING,
+  HOUSE,
   LOFT_FINISHES,
   LOFT_TYPES,
   MATERIALS,
   PATIOS,
-  PROTOTYPES,
+  SIZES,
 } from "../config";
 import { formatRange, PriceRange } from "../pricing";
 import { CalculatorAction, CalculatorState } from "../state";
@@ -43,15 +44,14 @@ export function QuoteModal({
 
   const close = () => dispatch({ type: "SET_QUOTE_OPEN", open: false });
 
-  const proto = PROTOTYPES[state.prototype];
-  const size = proto.sizes[state.ground.size];
+  const size = SIZES[state.ground.size];
 
   const rows: Array<[string, string, number | null]> = [
-    ["Prototype", `${proto.label} · ${proto.sub}`, null],
+    ["Property", `${HOUSE.label} · ${HOUSE.sub}`, null],
     ["Extension", `${size.description} (${size.area} m²)`, null],
     ["Finish", MATERIALS[state.ground.material].label, MATERIALS[state.ground.material].price],
     ["Roof", EXT_ROOFS[state.ground.roof].label, EXT_ROOFS[state.ground.roof].price],
-    ["Glazing", GLAZING[state.ground.glazing].label, GLAZING[state.ground.glazing].price],
+    ["Doors", GLAZING[state.ground.glazing].label, GLAZING[state.ground.glazing].price],
     ["Joinery", FRAMES[state.ground.frame].label, FRAMES[state.ground.frame].price],
     ["Patio", PATIOS[state.ground.patio].label, PATIOS[state.ground.patio].price],
     ["Loft", LOFT_TYPES[state.loft.type].label, LOFT_TYPES[state.loft.type].price],

@@ -9,7 +9,7 @@ export const TILE_METRES = 1.6;
 
 type Painter = (ctx: CanvasRenderingContext2D, size: number) => void;
 
-function makeTexture(paint: Painter, size = 256): THREE.CanvasTexture {
+function makeTexture(paint: Painter, size = 512): THREE.CanvasTexture {
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -181,7 +181,7 @@ const WALL_SPECS: Record<MaterialId, MaterialSpec> = {
 };
 
 const ROOF_SPECS: Record<LoftFinishId, MaterialSpec> = {
-  slate: { painter: paintCourses("#3b3f45", 0.1, 14, "#23262a", 61), roughness: 0.8 },
+  slate: { painter: paintCourses("#5a626c", 0.09, 17, "#40464e", 61), roughness: 0.75 },
   clay: { painter: paintCourses("#9c5237", 0.12, 16, "#5e3322", 71), roughness: 0.85 },
   zincRoof: {
     painter: paintVerticalSeams("#5b6066", "#3c4045", 8, 0.06, 81),
@@ -192,13 +192,13 @@ const ROOF_SPECS: Record<LoftFinishId, MaterialSpec> = {
 
 const EXTRA_SPECS = {
   houseBrick: {
-    painter: paintBricks("#876553", ["#7d5c4b", "#8f6c58", "#745442", "#836250"], "#998c7e", 91),
+    painter: paintBricks("#7d4f3d", ["#734736", "#875a46", "#6a4132", "#815341"], "#b0a496", 91),
     roughness: 0.95,
   },
-  grass: { painter: paintNoise("#46522f", 0.07, 101), roughness: 1 },
-  paving: { painter: paintPaving(111, "#8d8474", "#3a362f"), roughness: 0.9 },
-  porcelain: { painter: paintPaving(121, "#b9b3a8", "#56524a", 3, 0.04), roughness: 0.55 },
-  decking: { painter: paintPlanks("#6e5439", "#3a2d20", 9, 131), roughness: 0.8 },
+  grass: { painter: paintNoise("#5f7c38", 0.08, 101), roughness: 1 },
+  paving: { painter: paintPaving(111, "#d3c8a4", "#a89a78"), roughness: 0.9 },
+  porcelain: { painter: paintPaving(121, "#cfc9be", "#928c80", 3, 0.04), roughness: 0.55 },
+  decking: { painter: paintPlanks("#8a6a48", "#57422c", 9, 131), roughness: 0.8 },
 } satisfies Record<string, MaterialSpec>;
 
 export type ExtraMaterialId = keyof typeof EXTRA_SPECS;
@@ -267,23 +267,24 @@ export function flatMaterial(
   return mat;
 }
 
-/** Warm emissive "lit window" material — the Monolith Noir gold glow. */
-export function windowMaterial(intensity = 1.5): THREE.MeshStandardMaterial {
-  const key = `window|${intensity}`;
+/** Clear architectural glass — pale sky tint over a bright interior. */
+export function glassMaterial(): THREE.MeshStandardMaterial {
+  const key = "glass";
   let mat = flatCache.get(key);
   if (!mat) {
     mat = new THREE.MeshStandardMaterial({
-      color: "#1c1308",
-      emissive: "#e9b878",
-      emissiveIntensity: intensity,
-      roughness: 0.2,
+      color: "#d8e3e9",
+      metalness: 0.22,
+      roughness: 0.07,
+      transparent: true,
+      opacity: 0.5,
     });
     flatCache.set(key, mat);
   }
   return mat;
 }
 
-/** Dark glass for unlit panes. */
-export function darkGlassMaterial(): THREE.MeshStandardMaterial {
-  return flatMaterial("#10141a", 0.15, 0.6);
+/** The bright room seen behind clear glazing — keeps glass reading light. */
+export function interiorMaterial(): THREE.MeshStandardMaterial {
+  return flatMaterial("#b3ada1", 0.9);
 }

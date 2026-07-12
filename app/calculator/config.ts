@@ -1,7 +1,6 @@
-// Single source of truth for prototypes, options, dimensions and pricing.
+// Single source of truth for the host house, options, dimensions and pricing.
 // All prices are indicative London-premium construction costs (GBP).
 
-export type PrototypeId = "townhouse" | "villa";
 export type SizeId = "S" | "M" | "L";
 export type MaterialId =
   | "render"
@@ -9,12 +8,22 @@ export type MaterialId =
   | "londonStock"
   | "charredTimber"
   | "zinc";
-export type ExtRoofId = "flat" | "skylights" | "pitched";
-export type GlazingId = "french" | "sliding" | "bifold";
-export type LoftTypeId = "none" | "velux" | "dormer" | "mansard" | "hipToGable";
+export type ExtRoofId = "rooflights" | "lantern" | "pitched";
+export type GlazingId = "double" | "sliding" | "bifold";
+export type LoftTypeId = "none" | "boxDormer" | "mansardDormer";
 export type LoftFinishId = "slate" | "clay" | "zincRoof";
 
 export const BASE_RATE_PER_SQM = 3200;
+
+/** The single host property every project is modelled on. */
+export const HOUSE = {
+  label: "The Sovran House",
+  sub: "Brick semi · London",
+  /** width across the rear facade, metres */
+  w: 6.6,
+  /** depth front-to-back, metres */
+  d: 7.4,
+};
 
 export interface SizeOption {
   label: string;
@@ -22,48 +31,16 @@ export interface SizeOption {
   w: number;
   /** depth into the garden, metres */
   d: number;
-  /** floor area in m² (includes side-return for wrap-around) */
+  /** floor area in m² */
   area: number;
   description: string;
-  /** villa L only: adds a side-return wrap */
-  wrap?: boolean;
 }
 
-export interface PrototypeDef {
-  label: string;
-  sub: string;
-  sizes: Record<SizeId, SizeOption>;
-  loftTypes: LoftTypeId[];
-}
-
-export const PROTOTYPES: Record<PrototypeId, PrototypeDef> = {
-  townhouse: {
-    label: "The Townhouse",
-    sub: "Victorian · Chelsea",
-    sizes: {
-      S: { label: "S", w: 3, d: 4, area: 12, description: "Compact rear · 3m × 4m" },
-      M: { label: "M", w: 4, d: 5, area: 20, description: "Full-width rear · 4m × 5m" },
-      L: { label: "L", w: 4, d: 7, area: 28, description: "Extended rear · 4m × 7m" },
-    },
-    loftTypes: ["none", "velux", "dormer", "mansard"],
-  },
-  villa: {
-    label: "The Villa",
-    sub: "Detached · Hampstead",
-    sizes: {
-      S: { label: "S", w: 4, d: 4, area: 16, description: "Garden room · 4m × 4m" },
-      M: { label: "M", w: 6, d: 4, area: 24, description: "Full-width rear · 6m × 4m" },
-      L: {
-        label: "L",
-        w: 6,
-        d: 4,
-        area: 36,
-        description: "Wrap-around · 36m²",
-        wrap: true,
-      },
-    },
-    loftTypes: ["none", "velux", "dormer", "hipToGable"],
-  },
+/** The extension always spans the full width of the house — sizes vary depth. */
+export const SIZES: Record<SizeId, SizeOption> = {
+  S: { label: "S", w: 6.6, d: 3, area: 20, description: "Full-width rear · 3m deep" },
+  M: { label: "M", w: 6.6, d: 4, area: 26, description: "Full-width rear · 4m deep" },
+  L: { label: "L", w: 6.6, d: 5, area: 33, description: "Full-width rear · 5m deep" },
 };
 
 export interface PricedOption {
@@ -80,26 +57,24 @@ export const MATERIALS: Record<MaterialId, PricedOption> = {
 };
 
 export const EXT_ROOFS: Record<ExtRoofId, PricedOption> = {
-  flat: { label: "Flat roof", price: 0 },
-  skylights: { label: "Flat + skylights", price: 3600 },
+  rooflights: { label: "Rooflights", price: 0 },
+  lantern: { label: "Roof lantern", price: 4800 },
   pitched: { label: "Pitched slate", price: 6800 },
 };
 
 export const GLAZING: Record<GlazingId, PricedOption> = {
-  french: { label: "French doors", price: 0 },
+  double: { label: "Double doors", price: 0 },
   sliding: { label: "Sliding doors", price: 4200 },
   bifold: { label: "Bifold doors", price: 6400 },
 };
 
 export const LOFT_TYPES: Record<LoftTypeId, PricedOption> = {
   none: { label: "No loft", price: 0 },
-  velux: { label: "Velux only", price: 42000 },
-  dormer: { label: "Flat dormer", price: 68000 },
-  mansard: { label: "Mansard", price: 95000 },
-  hipToGable: { label: "Hip-to-gable", price: 85000 },
+  boxDormer: { label: "Box dormer", price: 68000 },
+  mansardDormer: { label: "Mansard dormer", price: 95000 },
 };
 
-/** Whole-roof finish — re-roofs the main roof, loft and pitched extension. */
+/** Whole-roof finish — re-roofs the main roof and clads the dormer. */
 export const LOFT_FINISHES: Record<LoftFinishId, PricedOption> = {
   slate: { label: "Welsh slate", price: 0 },
   clay: { label: "Clay tiles", price: 8500 },
@@ -120,10 +95,4 @@ export const PATIOS: Record<PatioId, PricedOption> = {
   york: { label: "York stone", price: 0 },
   porcelain: { label: "Porcelain", price: 2200 },
   decking: { label: "Hardwood deck", price: 1800 },
-};
-
-/** Premium loft option equivalence when switching prototype. */
-export const LOFT_SWAP: Partial<Record<LoftTypeId, LoftTypeId>> = {
-  mansard: "hipToGable",
-  hipToGable: "mansard",
 };
