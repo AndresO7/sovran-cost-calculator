@@ -63,11 +63,11 @@ const optionRow: React.CSSProperties = {
   width: "100%",
   textAlign: "left",
   padding: "clamp(13px, 1.9vh, 19px) clamp(16px, 1.6vw, 24px)",
-  background: "rgba(239,233,225,0.02)",
-  border: "1px solid rgba(239,233,225,0.1)",
+  background: "rgba(26,25,22,0.02)",
+  border: "1px solid rgba(26,25,22,0.1)",
   cursor: "pointer",
   transition: "border-color 0.3s ease, background 0.3s ease, transform 0.3s ease",
-  color: "rgba(239,233,225,0.55)",
+  color: "rgba(26,25,22,0.55)",
 };
 
 /**
@@ -113,7 +113,7 @@ export function StartScreen({ dispatch }: { dispatch: React.Dispatch<CalculatorA
         position: "relative",
         overflow: "hidden",
         background:
-          "radial-gradient(1100px 600px at 74% 14%, rgba(201,169,110,0.05), transparent 60%), var(--background)",
+          "radial-gradient(1100px 600px at 74% 14%, rgba(184,148,78,0.08), transparent 60%), var(--background)",
       }}
     >
       {/* ghost numeral, clipped by the container */}
@@ -214,7 +214,7 @@ export function StartScreen({ dispatch }: { dispatch: React.Dispatch<CalculatorA
               <span style={{ fontFamily: "var(--font-bodoni)", fontStyle: "italic", color: ACCENT, fontSize: 15 }}>
                 01
               </span>
-              <span style={{ ...microLabel, color: "rgba(239,233,225,0.6)" }}>
+              <span style={{ ...microLabel, color: "rgba(26,25,22,0.55)" }}>
                 What do you want to extend?
               </span>
             </div>
@@ -225,13 +225,13 @@ export function StartScreen({ dispatch }: { dispatch: React.Dispatch<CalculatorA
                   onClick={() => begin(o.id)}
                   style={optionRow}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(201,169,110,0.65)";
-                    e.currentTarget.style.background = "rgba(201,169,110,0.07)";
+                    e.currentTarget.style.borderColor = "rgba(184,148,78,0.6)";
+                    e.currentTarget.style.background = "rgba(184,148,78,0.08)";
                     e.currentTarget.style.transform = "translateX(4px)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(239,233,225,0.1)";
-                    e.currentTarget.style.background = "rgba(239,233,225,0.02)";
+                    e.currentTarget.style.borderColor = "rgba(26,25,22,0.1)";
+                    e.currentTarget.style.background = "rgba(26,25,22,0.02)";
                     e.currentTarget.style.transform = "translateX(0)";
                   }}
                 >
@@ -243,7 +243,7 @@ export function StartScreen({ dispatch }: { dispatch: React.Dispatch<CalculatorA
                         fontWeight: 400,
                         fontSize: "clamp(14px, 1.15vw, 16.5px)",
                         letterSpacing: "0.05em",
-                        color: "rgba(239,233,225,0.88)",
+                        color: "rgba(26,25,22,0.85)",
                       }}
                     >
                       {o.label}

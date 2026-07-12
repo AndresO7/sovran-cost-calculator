@@ -11,7 +11,7 @@ const linkStyle: React.CSSProperties = {
   fontSize: "clamp(10px, 0.78vw, 11.5px)",
   letterSpacing: "0.22em",
   textTransform: "uppercase",
-  color: "rgba(239,233,225,0.7)",
+  color: "rgba(26,25,22,0.6)",
   textDecoration: "none",
   transition: "color 0.3s ease",
   whiteSpace: "nowrap",
@@ -42,7 +42,7 @@ export function SiteNav() {
             href="#"
             style={linkStyle}
             onMouseEnter={(e) => (e.currentTarget.style.color = FG)}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(239,233,225,0.7)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(26,25,22,0.6)")}
           >
             {l}
           </a>
@@ -80,7 +80,7 @@ export function SiteNav() {
               href="#"
               style={linkStyle}
               onMouseEnter={(e) => (e.currentTarget.style.color = FG)}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(239,233,225,0.7)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(26,25,22,0.6)")}
             >
               {l}
             </a>
@@ -97,8 +97,8 @@ export function SiteNav() {
             letterSpacing: "0.2em",
             textTransform: "uppercase",
             color: FG,
-            border: `1px solid rgba(201,169,110,0.55)`,
-            background: "rgba(201,169,110,0.07)",
+            border: `1px solid rgba(184,148,78,0.5)`,
+            background: "rgba(184,148,78,0.08)",
             padding: "11px clamp(13px, 1.4vw, 20px)",
             whiteSpace: "nowrap",
             cursor: "default",

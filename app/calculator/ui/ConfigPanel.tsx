@@ -51,7 +51,7 @@ export function ConfigPanel({
     <aside
       className="calc-panel"
       style={{
-        background: "#11100e",
+        background: "#f8f6f3",
         borderLeft: `1px solid ${LINE}`,
         display: "flex",
         flexDirection: "column",

@@ -45,7 +45,7 @@ export function TopBar({
         height: 60,
         padding: "0 clamp(16px, 2.5vw, 44px)",
         borderBottom: `1px solid ${LINE}`,
-        background: "rgba(17, 16, 14, 0.6)",
+        background: "rgba(248, 246, 243, 0.85)",
         position: "relative",
         zIndex: 20,
         flexShrink: 0,
@@ -118,13 +118,13 @@ export function TopBar({
         style={{ ...arrowButton, padding: "10px clamp(14px, 1.6vw, 22px)" }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = FG;
-          e.currentTarget.style.color = "#0d0c0a";
+          e.currentTarget.style.color = "#f8f6f3";
           e.currentTarget.style.borderColor = FG;
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.background = "transparent";
           e.currentTarget.style.color = FG;
-          e.currentTarget.style.borderColor = "rgba(239,233,225,0.28)";
+          e.currentTarget.style.borderColor = "rgba(26,25,22,0.2)";
         }}
       >
         Detailed Quote

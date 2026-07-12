@@ -2,12 +2,12 @@
 
 import { CSSProperties, ReactNode } from "react";
 
-export const ACCENT = "#c9a96e";
-export const FG = "#efe9e1";
-export const MUTED = "rgba(239, 233, 225, 0.45)";
-export const FAINT = "rgba(239, 233, 225, 0.32)";
-export const GHOST = "rgba(239, 233, 225, 0.1)";
-export const LINE = "rgba(239, 233, 225, 0.1)";
+export const ACCENT = "#b8944e";
+export const FG = "#1a1916";
+export const MUTED = "rgba(26, 25, 22, 0.55)";
+export const FAINT = "rgba(26, 25, 22, 0.4)";
+export const GHOST = "rgba(26, 25, 22, 0.08)";
+export const LINE = "rgba(26, 25, 22, 0.12)";
 
 export function priceTag(price: number): string {
   return price === 0 ? "Included" : `+£${price.toLocaleString("en-GB")}`;
@@ -102,7 +102,7 @@ export function SizePicker({
                 width: 46,
                 height: 46,
                 borderRadius: "50%",
-                border: `1px solid ${active ? ACCENT : "rgba(239,233,225,0.18)"}`,
+                border: `1px solid ${active ? ACCENT : "rgba(26,25,22,0.18)"}`,
                 background: active ? "rgba(201,169,110,0.1)" : "transparent",
                 color: active ? ACCENT : MUTED,
                 fontFamily: "var(--font-bodoni)",
@@ -203,7 +203,7 @@ export function SwatchRow({
                 borderRadius: "50%",
                 padding: 0,
                 cursor: "pointer",
-                border: active ? `1px solid ${ACCENT}` : "1px solid rgba(239,233,225,0.16)",
+                border: active ? `1px solid ${ACCENT}` : "1px solid rgba(26,25,22,0.14)",
                 outline: active ? `1px solid ${ACCENT}` : "1px solid transparent",
                 outlineOffset: 3,
                 transition: "all 0.3s ease",
@@ -284,7 +284,7 @@ export function OptionGrid({
               transition: "all 0.3s ease",
             }}
           >
-            <span style={{ color: active ? ACCENT : "rgba(239,233,225,0.5)" }}>{o.icon}</span>
+            <span style={{ color: active ? ACCENT : "rgba(26,25,22,0.45)" }}>{o.icon}</span>
             <span
               style={{
                 fontFamily: "var(--font-outfit)",
@@ -329,7 +329,7 @@ export const arrowButton: CSSProperties = {
   textTransform: "uppercase",
   color: FG,
   background: "transparent",
-  border: "1px solid rgba(239,233,225,0.28)",
+  border: "1px solid rgba(26,25,22,0.2)",
   padding: "13px clamp(16px, 1.8vw, 26px)",
   cursor: "pointer",
   transition: "all 0.35s ease",
