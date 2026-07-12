@@ -76,7 +76,7 @@ export function Extension({
       : width * (glazing === "sliding" ? 0.78 : 0.86);
   const glassH = 2.3;
 
-  // pair of flat rooflights sitting close to the house
+  // pair of flat rooflights centred on the roof
   const skyS = Math.min(1.15, width * 0.3);
   const skyGap = Math.min(0.55, width * 0.12);
 
@@ -115,7 +115,7 @@ export function Extension({
           <Rooflight
             key={s}
             size={skyS}
-            position={[s * (skyS / 2 + skyGap), wallH + 0.16, depth * 0.34]}
+            position={[s * (skyS / 2 + skyGap), wallH + 0.16, depth / 2]}
           />
         ))}
 
