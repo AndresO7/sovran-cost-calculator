@@ -83,9 +83,9 @@ export function Extension({
   const openW = unitW + 0.16;
   const openH = 2.42;
 
-  // pair of flat rooflights centred on the roof
-  const skyS = Math.min(1.15, width * 0.3);
-  const skyGap = Math.min(0.55, width * 0.12);
+  // pair of flat rooflights, smaller and spread apart like the reference
+  const skyS = Math.min(0.95, width * 0.24);
+  const skyX = width * 0.22;
 
   // lantern footprint, centred on the roof
   const lanW = Math.min(2.7, width * 0.58);
@@ -93,7 +93,7 @@ export function Extension({
 
   // wall thickness for hollow construction
   const wt = 0.15;
-  const interiorColor = "#1a1e21";
+  const interiorColor = "#b8b0a1";
 
   return (
     <group ref={group}>
@@ -116,7 +116,7 @@ export function Extension({
         matId={material}
       />
 
-      {/* Dark interior surfaces */}
+      {/* Interior surfaces seen through the glazing */}
       {/* floor */}
       <CBox
         size={[width - wt * 2, 0.02, depth - wallT - wt]}
@@ -198,7 +198,7 @@ export function Extension({
           <Rooflight
             key={s}
             size={skyS}
-            position={[s * (skyS / 2 + skyGap), wallH + 0.16, depth / 2]}
+            position={[s * skyX, wallH + 0.16, depth / 2]}
           />
         ))}
 
@@ -371,7 +371,11 @@ function RoofEdgeTrim({ w, d, y, z }: { w: number; d: number; y: number; z: numb
   );
 }
 
-/** Flat rooflight — black kerb, flush clear glass (no interior plane). */
+/**
+ * Flat rooflight — chunky black kerb frame with a real opening, glass
+ * recessed inside it and a lit interior plane below so the unit reads
+ * see-through instead of as a solid dark panel.
+ */
 function Rooflight({
   size,
   position,
@@ -380,13 +384,42 @@ function Rooflight({
   position: [number, number, number];
 }) {
   const kerb = flatMaterial("#33383d", 0.55);
+  const bt = 0.13; // kerb frame thickness
+  const outer = size + bt * 2;
   return (
     <group position={position}>
-      <mesh material={kerb} castShadow={false}>
-        <boxGeometry args={[size + 0.2, 0.13, size + 0.2]} />
+      {/* kerb ring with a real opening */}
+      {([-1, 1] as const).map((s) => (
+        <mesh
+          key={`z${s}`}
+          position={[0, 0, (s * (outer - bt)) / 2]}
+          material={kerb}
+          castShadow={false}
+        >
+          <boxGeometry args={[outer, 0.13, bt]} />
+        </mesh>
+      ))}
+      {([-1, 1] as const).map((s) => (
+        <mesh
+          key={`x${s}`}
+          position={[(s * (outer - bt)) / 2, 0, 0]}
+          material={kerb}
+          castShadow={false}
+        >
+          <boxGeometry args={[bt, 0.13, size]} />
+        </mesh>
+      ))}
+      {/* lit interior seen through the glazing */}
+      <mesh
+        position={[0, 0.005, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        material={flatMaterial("#b8b0a1", 0.95)}
+        castShadow={false}
+      >
+        <planeGeometry args={[size, size]} />
       </mesh>
       <mesh
-        position={[0, 0.08, 0]}
+        position={[0, 0.05, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         material={glassMaterial()}
         castShadow={false}
@@ -412,6 +445,15 @@ function Lantern({
       <mesh material={flatMaterial("#33383d", 0.55)} castShadow={false}>
         <boxGeometry args={[w + 0.18, 0.12, d + 0.18]} />
       </mesh>
+      {/* lit interior seen through the lantern glazing */}
+      <mesh
+        position={[0, 0.065, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        material={flatMaterial("#b8b0a1", 0.95)}
+        castShadow={false}
+      >
+        <planeGeometry args={[w, d]} />
+      </mesh>
       {/* unit 4-sided pyramid stretched to the rectangular footprint */}
       <group position={[0, 0.24, 0]} scale={[w, 0.36, d]}>
         <mesh rotation={[0, Math.PI / 4, 0]} material={glassMaterial()} castShadow={false}>
@@ -436,14 +478,24 @@ function SlopeRooflights({
   const theta = Math.atan2(PITCH_RISE, run);
   const z = depth * 0.45;
   const y = wallH + PITCH_RISE * (1 - z / run) + 0.06;
-  const spread = width * 0.28;
+  // smaller units, spread further apart, chunky kerb frame — like the reference
+  const spread = width * 0.33;
   const kerb = flatMaterial("#22262b", 0.55);
   return (
     <>
       {[-spread, 0, spread].map((x) => (
         <group key={x} position={[x, y, z]} rotation={[theta, 0, 0]}>
           <mesh material={kerb} castShadow={false}>
-            <boxGeometry args={[0.95, 0.08, 0.75]} />
+            <boxGeometry args={[0.8, 0.08, 0.62]} />
+          </mesh>
+          {/* lit interior seen through the glazing */}
+          <mesh
+            position={[0, 0.045, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            material={flatMaterial("#b8b0a1", 0.95)}
+            castShadow={false}
+          >
+            <planeGeometry args={[0.58, 0.42]} />
           </mesh>
           <mesh
             position={[0, 0.055, 0]}
@@ -451,7 +503,7 @@ function SlopeRooflights({
             material={glassMaterial()}
             castShadow={false}
           >
-            <planeGeometry args={[0.85, 0.65]} />
+            <planeGeometry args={[0.58, 0.42]} />
           </mesh>
         </group>
       ))}

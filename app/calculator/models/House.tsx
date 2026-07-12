@@ -53,7 +53,7 @@ export function House({ state }: { state: CalculatorState }) {
   return (
     <group ref={ref}>
       {/* Hollow house structure — left/right walls only, front/rear are
-          separate panels with punched openings. Interior is dark. */}
+          separate panels with punched openings. Interior reads as a lit room. */}
       {/* LEFT side wall */}
       <TexBox
         size={[WALL_T, WALL_H, D - 0.44]}
@@ -66,7 +66,7 @@ export function House({ state }: { state: CalculatorState }) {
         position={[W / 2 - WALL_T / 2, WALL_H / 2, -D / 2]}
         matId="houseBrick"
       />
-      {/* Dark interior surfaces */}
+      {/* Interior surfaces seen through the glazing */}
       <HouseInterior w={W} h={WALL_H} d={D} wallT={WALL_T} />
       <WallWithOpenings
         w={W}
@@ -224,7 +224,7 @@ function FrontDoor({ x }: { x: number }) {
   );
 }
 
-/** Dark interior surfaces visible through windows. */
+/** Softly lit interior surfaces visible through windows. */
 function HouseInterior({
   w,
   h,
@@ -236,7 +236,7 @@ function HouseInterior({
   d: number;
   wallT: number;
 }) {
-  const color = "#1a1e21";
+  const color = "#b8b0a1";
   const innerW = w - wallT * 2;
   const innerD = d - 0.44;
   const mat = flatMaterial(color, 0.95);

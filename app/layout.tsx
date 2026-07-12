@@ -38,7 +38,12 @@ export default function RootLayout({
       lang="en-GB"
       className={`${outfit.variable} ${bodoni.variable} ${interTight.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      {/* suppressHydrationWarning: browser extensions (e.g. ColorZilla's
+          cz-shortcut-listen) inject attributes into <body> before React
+          hydrates — the mismatch is outside our control */}
+      <body className="min-h-full" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }

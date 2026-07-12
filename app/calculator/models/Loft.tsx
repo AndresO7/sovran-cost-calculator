@@ -7,7 +7,7 @@ import {
   metricMaterial,
   TILE_METRES,
 } from "./materials";
-import { CBox, Chimney, TexBox, usePopIn, WallWithOpenings, Win } from "./parts";
+import { CBox, Chimney, TexBox, usePopIn, WallWithOpenings } from "./parts";
 
 interface LoftProps {
   type: LoftTypeId;
@@ -36,11 +36,11 @@ export function Loft(props: LoftProps) {
   }
 }
 
-/** Box on the rear slope, zinc-tray clad, chimney riding the ridge. */
+/** Box on the rear slope, clad in the whole-roof finish, chimney riding the ridge. */
 function BoxDormer(props: LoftProps) {
   const ref = useRef<THREE.Group>(null);
   usePopIn(ref, 0.05);
-  const { roofW, slopeHalfD, eaveY, rise, rearEaveZ } = props;
+  const { roofW, slopeHalfD, eaveY, rise, rearEaveZ, finish } = props;
   const w = roofW - 1.7; // set back from both gables
   const frontZ = rearEaveZ - 0.4;
   const ridgeZ = rearEaveZ - slopeHalfD;
@@ -63,7 +63,7 @@ function BoxDormer(props: LoftProps) {
     () => [-1, 1].map((s) => ({ x: s * w * 0.22, y: h / 2, w: winW, h: winH })),
     [w, h]
   );
-  const interiorColor = "#1a1e21";
+  const interiorColor = "#b8b0a1";
 
   return (
     <group ref={ref}>
@@ -72,21 +72,21 @@ function BoxDormer(props: LoftProps) {
       <TexBox
         size={[wallT, h, bodyD]}
         position={[-w / 2 + wallT / 2, baseY + h / 2, bodyZ]}
-        matId="zincPanels"
+        matId={finish}
       />
       {/* RIGHT wall */}
       <TexBox
         size={[wallT, h, bodyD]}
         position={[w / 2 - wallT / 2, baseY + h / 2, bodyZ]}
-        matId="zincPanels"
+        matId={finish}
       />
       {/* BACK wall */}
       <TexBox
         size={[w - wallT * 2, h, wallT]}
         position={[0, baseY + h / 2, bodyZ - bodyD / 2 + wallT / 2]}
-        matId="zincPanels"
+        matId={finish}
       />
-      {/* Dark interior surfaces */}
+      {/* Interior surfaces seen through the glazing */}
       <DormerInterior
         w={w}
         h={h}
@@ -101,14 +101,14 @@ function BoxDormer(props: LoftProps) {
         h={h}
         t={wallT}
         openings={openings}
-        matId="zincPanels"
+        matId={finish}
         position={[0, baseY, frontZ - wallT]}
       />
-      {/* ribbed zinc deck meeting the ridge, framed all round by a lip */}
+      {/* deck meeting the ridge in the same finish, framed all round by a lip */}
       <TexBox
         size={[deckW, deckT, deckD]}
         position={[0, deckTopY - deckT / 2, deckZ]}
-        matId="zincPanels"
+        matId={finish}
       />
       <DeckFrame w={deckW} d={deckD} y={deckTopY + 0.02} z={deckZ} />
       {/* frameless glazing sunk inside the openings, like the reference */}
@@ -245,21 +245,41 @@ function MansardDormer(props: LoftProps) {
     return m;
   }, [finish]);
 
-  const mansardInterior = flatMaterial("#1a1e21", 0.95);
+  const mansardInterior = flatMaterial("#b8b0a1", 0.95);
+
+  const winW = 1.1;
+  const winH = 1.5;
+  const openings = useMemo(
+    () =>
+      [-1, 1].map((s) => ({
+        x: s * w * 0.22,
+        y: faceLen / 2 + 0.12,
+        w: winW,
+        h: winH,
+      })),
+    [w, faceLen]
+  );
 
   return (
     <group ref={ref}>
-      {/* steep slated face with the windows set into it */}
+      {/* steep slated face with real punched openings for the windows */}
       <group
         position={[0, eaveY + hVert / 2, rearEaveZ - run / 2]}
         rotation={[-alpha, 0, 0]}
       >
-        <TexBox size={[w, faceLen, 0.14]} position={[0, 0, 0]} matId={finish} />
+        <WallWithOpenings
+          w={w}
+          h={faceLen}
+          t={0.14}
+          openings={openings}
+          matId={finish}
+          position={[0, -faceLen / 2, -0.07]}
+        />
         {([-1, 1] as const).map((s) => (
-          <DormerWindow key={s} w={0.92} h={1.5} position={[s * w * 0.22, 0.12, 0.07]} />
+          <MansardWindow key={s} w={winW} h={winH} position={[s * w * 0.22, 0.12, 0]} />
         ))}
-        {/* Dark interior wall behind the slated face */}
-        <mesh position={[0, 0, -0.08]} material={mansardInterior}>
+        {/* Interior wall behind the slated face, seen through the glazing */}
+        <mesh position={[0, 0, -0.095]} material={mansardInterior}>
           <boxGeometry args={[w - 0.3, faceLen - 0.2, 0.02]} />
         </mesh>
       </group>
@@ -279,62 +299,152 @@ function MansardDormer(props: LoftProps) {
 }
 
 /**
- * Dormer window: a dark hood boxed out from the face, with the glazing
- * recessed deep inside it — the window's own frame edges sit tucked
- * behind the hood boards, like the reference dormers.
+ * Mansard window: glazing recessed behind the slate face inside the punched
+ * opening — a dark lining sleeves the reveal, one slim anthracite sash with
+ * a central mullion sits at the back, and a proud surround hoods the head:
+ * the top board projects off the slate and the jambs taper back to flush
+ * at the cill, like the reference mansard.
  */
-function DormerWindow({
+function MansardWindow({
   w,
   h,
   position,
-  proj = 0.2,
+  recess = 0.1,
 }: {
   w: number;
   h: number;
   position: [number, number, number];
-  /** hood projection from the face */
-  proj?: number;
+  /** how far the sash sits behind the slate face */
+  recess?: number;
 }) {
-  const bt = 0.07; // hood board thickness
-  const innerW = w + 0.06; // window frame tucks 2cm behind the hood boards
-  const innerH = h + 0.06;
-  const hood = "#272c31";
+  const lining = flatMaterial("#23272b", 0.85);
+  const sash = flatMaterial("#2e3338", 0.7);
+  const lt = 0.025; // lining board thickness
+  const ld = 0.14; // lining depth — sleeves the full reveal
+  const lz = 0.07 - ld / 2;
+  const innerW = w - lt * 2;
+  const innerH = h - lt * 2;
+  const ft = 0.055; // sash frame thickness
+  const glassZ = 0.07 - recess;
+  const surround = "#262b30";
+  const bt = 0.06; // surround board thickness
+  const proj = 0.15; // head projection off the slate face
+  const jambL = h + bt;
+
+  // solid wedge jambs: proud of the slate at the head, tapering back to
+  // near-flush at the cill — solid from inside the wall out, so no gap
+  // opens between board and face
+  const jambGeo = useMemo(() => {
+    type V3 = [number, number, number];
+    const yTop = jambL / 2;
+    const yBot = -jambL / 2;
+    const zBack = 0.03; // buried behind the slate surface
+    const zTop = 0.07 + proj;
+    const zBot = 0.085;
+    const positions: number[] = [];
+    const push = (...verts: V3[]) => {
+      for (const v of verts) positions.push(...v);
+    };
+    for (const s of [-1, 1]) {
+      const x0 = s * (w / 2 + bt / 2) - bt / 2;
+      const x1 = x0 + bt;
+      const A0: V3 = [x0, yBot, zBack];
+      const A1: V3 = [x1, yBot, zBack];
+      const B0: V3 = [x0, yTop, zBack];
+      const B1: V3 = [x1, yTop, zBack];
+      const C0: V3 = [x0, yTop, zTop];
+      const C1: V3 = [x1, yTop, zTop];
+      const D0: V3 = [x0, yBot, zBot];
+      const D1: V3 = [x1, yBot, zBot];
+      push(A1, B1, C1, A1, C1, D1); // +x cap
+      push(A0, C0, B0, A0, D0, C0); // −x cap
+      push(D0, D1, C1, D0, C1, C0); // sloped front
+      push(B0, C0, C1, B0, C1, B1); // top
+      push(A0, A1, D1, A0, D1, D0); // bottom
+      push(A0, B0, B1, A0, B1, A1); // back, buried in the slate
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    geo.computeVertexNormals();
+    return geo;
+  }, [w, jambL]);
+
   return (
     <group position={position}>
-      {/* projecting hood — jambs full height, head lip slightly proud */}
+      {/* proud surround — projecting head board over the window */}
+      <CBox
+        size={[w + bt * 2, bt, 0.2]}
+        position={[0, h / 2 + bt / 2, 0.12]}
+        color={surround}
+      />
+      <mesh
+        geometry={jambGeo}
+        material={flatMaterial(surround, 0.85)}
+        castShadow
+        receiveShadow
+      />
+      {/* slim cill line under the opening */}
+      <CBox
+        size={[w + bt * 2, 0.05, 0.1]}
+        position={[0, -(h / 2 + 0.025), 0.06]}
+        color={surround}
+        castShadow={false}
+      />
+      {/* dark lining sleeving the punched reveal */}
       {([-1, 1] as const).map((s) => (
-        <CBox
-          key={s}
-          size={[bt, innerH + bt * 2, proj]}
-          position={[s * ((innerW + bt) / 2), 0, proj / 2]}
-          color={hood}
-        />
+        <mesh
+          key={`j${s}`}
+          position={[s * (w / 2 - lt / 2), 0, lz]}
+          material={lining}
+          castShadow={false}
+        >
+          <boxGeometry args={[lt, h, ld]} />
+        </mesh>
       ))}
-      <CBox
-        size={[innerW, bt, proj + 0.05]}
-        position={[0, (innerH + bt) / 2, (proj + 0.05) / 2]}
-        color={hood}
-      />
-      <CBox
-        size={[innerW, bt, proj]}
-        position={[0, -(innerH + bt) / 2, proj / 2]}
-        color={hood}
-        castShadow={false}
-      />
-      {/* light-catching cap over the head */}
-      <CBox
-        size={[innerW + bt * 2 + 0.04, 0.045, proj + 0.07]}
-        position={[0, (innerH + bt) / 2 + bt / 2 + 0.015, (proj + 0.07) / 2 - 0.01]}
-        color="#4d545b"
-        castShadow={false}
-      />
-      {/* the stepped sash recedes from here back towards the face plane */}
-      <Win w={w} h={h} bars={false} mullion frameColor="#2e3338" position={[0, 0, 0.11]} />
+      {([-1, 1] as const).map((s) => (
+        <mesh
+          key={`h${s}`}
+          position={[0, s * (h / 2 - lt / 2), lz]}
+          material={lining}
+          castShadow={false}
+        >
+          <boxGeometry args={[innerW, lt, ld]} />
+        </mesh>
+      ))}
+      {/* slim sash frame at the back of the reveal */}
+      {([-1, 1] as const).map((s) => (
+        <mesh
+          key={`fj${s}`}
+          position={[s * (innerW / 2 - ft / 2), 0, glassZ + 0.02]}
+          material={sash}
+          castShadow={false}
+        >
+          <boxGeometry args={[ft, innerH, 0.045]} />
+        </mesh>
+      ))}
+      {([-1, 1] as const).map((s) => (
+        <mesh
+          key={`fh${s}`}
+          position={[0, s * (innerH / 2 - ft / 2), glassZ + 0.02]}
+          material={sash}
+          castShadow={false}
+        >
+          <boxGeometry args={[innerW - ft * 2, ft, 0.045]} />
+        </mesh>
+      ))}
+      {/* central mullion splits the unit into a pair */}
+      <mesh position={[0, 0, glassZ + 0.015]} material={sash} castShadow={false}>
+        <boxGeometry args={[0.06, innerH - ft * 2, 0.035]} />
+      </mesh>
+      {/* transparent glass only — no interior plane blocking the view */}
+      <mesh position={[0, 0, glassZ]} material={glassMaterial()} castShadow={false}>
+        <planeGeometry args={[innerW - 0.02, innerH - 0.02]} />
+      </mesh>
     </group>
   );
 }
 
-/** Dark interior surfaces for the dormer, visible through windows. */
+/** Interior surfaces for the dormer, visible through windows. */
 function DormerInterior({
   w,
   h,
