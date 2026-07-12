@@ -5,6 +5,7 @@ import { CalculatorState } from "../state";
 import { Extension } from "./Extension";
 import { Garden } from "./Garden";
 import { Loft } from "./Loft";
+import { flatMaterial } from "./materials";
 import {
   CBox,
   GableWall,
@@ -51,15 +52,22 @@ export function House({ state }: { state: CalculatorState }) {
 
   return (
     <group ref={ref}>
-      {/* main body core; front/rear facades are separate panels with real
-          punched openings so the joinery sits in genuine reveals. The core
-          stops flush with the back of each panel so the recessed glazing
-          stays clear of it */}
+      {/* Hollow house structure — left/right walls only, front/rear are
+          separate panels with punched openings. Interior is dark. */}
+      {/* LEFT side wall */}
       <TexBox
-        size={[W - 0.01, WALL_H, D - 0.44]}
-        position={[0, WALL_H / 2, -D / 2]}
+        size={[WALL_T, WALL_H, D - 0.44]}
+        position={[-W / 2 + WALL_T / 2, WALL_H / 2, -D / 2]}
         matId="houseBrick"
       />
+      {/* RIGHT side wall */}
+      <TexBox
+        size={[WALL_T, WALL_H, D - 0.44]}
+        position={[W / 2 - WALL_T / 2, WALL_H / 2, -D / 2]}
+        matId="houseBrick"
+      />
+      {/* Dark interior surfaces */}
+      <HouseInterior w={W} h={WALL_H} d={D} wallT={WALL_T} />
       <WallWithOpenings
         w={W}
         h={WALL_H}
@@ -212,6 +220,57 @@ function FrontDoor({ x }: { x: number }) {
       {/* steps */}
       <CBox size={[1.3, 0.16, 0.5]} position={[0, 0.08, 0.3]} color="#c9c2b2" />
       <CBox size={[1.5, 0.08, 0.7]} position={[0, 0.04, 0.42]} color="#bdb6a6" />
+    </group>
+  );
+}
+
+/** Dark interior surfaces visible through windows. */
+function HouseInterior({
+  w,
+  h,
+  d,
+  wallT,
+}: {
+  w: number;
+  h: number;
+  d: number;
+  wallT: number;
+}) {
+  const color = "#1a1e21";
+  const innerW = w - wallT * 2;
+  const innerD = d - 0.44;
+  const mat = flatMaterial(color, 0.95);
+
+  return (
+    <group>
+      {/* floor */}
+      <mesh position={[0, 0.01, -d / 2]} material={mat} receiveShadow={false}>
+        <boxGeometry args={[innerW, 0.02, innerD]} />
+      </mesh>
+      {/* ceiling / first floor */}
+      <mesh position={[0, h / 2, -d / 2]} material={mat} receiveShadow={false}>
+        <boxGeometry args={[innerW, 0.02, innerD]} />
+      </mesh>
+      {/* top ceiling */}
+      <mesh position={[0, h - 0.01, -d / 2]} material={mat} receiveShadow={false}>
+        <boxGeometry args={[innerW, 0.02, innerD]} />
+      </mesh>
+      {/* left interior wall */}
+      <mesh position={[-w / 2 + wallT + 0.01, h / 2, -d / 2]} material={mat} receiveShadow={false}>
+        <boxGeometry args={[0.02, h, innerD]} />
+      </mesh>
+      {/* right interior wall */}
+      <mesh position={[w / 2 - wallT - 0.01, h / 2, -d / 2]} material={mat} receiveShadow={false}>
+        <boxGeometry args={[0.02, h, innerD]} />
+      </mesh>
+      {/* front interior wall */}
+      <mesh position={[0, h / 2, -d + wallT + 0.01]} material={mat} receiveShadow={false}>
+        <boxGeometry args={[innerW, h, 0.02]} />
+      </mesh>
+      {/* rear interior wall */}
+      <mesh position={[0, h / 2, -wallT - 0.01]} material={mat} receiveShadow={false}>
+        <boxGeometry args={[innerW, h, 0.02]} />
+      </mesh>
     </group>
   );
 }

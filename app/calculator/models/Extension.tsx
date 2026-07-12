@@ -10,7 +10,7 @@ import {
   LoftFinishId,
   MaterialId,
 } from "../config";
-import { flatMaterial, glassMaterial, interiorMaterial } from "./materials";
+import { flatMaterial, glassMaterial } from "./materials";
 import { CBox, LeanTo, TexBox } from "./parts";
 
 const EXT_WALL_H = 2.85;
@@ -91,13 +91,66 @@ export function Extension({
   const lanW = Math.min(2.7, width * 0.58);
   const lanD = Math.min(1.9, depth * 0.42);
 
+  // wall thickness for hollow construction
+  const wt = 0.15;
+  const interiorColor = "#1a1e21";
+
   return (
     <group ref={group}>
-      {/* solid volume stops short of the garden face… */}
+      {/* LEFT exterior wall */}
       <TexBox
-        size={[width, wallH, depth - wallT]}
-        position={[0, wallH / 2, (depth - wallT) / 2]}
+        size={[wt, wallH, depth - wallT]}
+        position={[-width / 2 + wt / 2, wallH / 2, (depth - wallT) / 2]}
         matId={material}
+      />
+      {/* RIGHT exterior wall */}
+      <TexBox
+        size={[wt, wallH, depth - wallT]}
+        position={[width / 2 - wt / 2, wallH / 2, (depth - wallT) / 2]}
+        matId={material}
+      />
+      {/* BACK wall (against house) */}
+      <TexBox
+        size={[width - wt * 2, wallH, wt]}
+        position={[0, wallH / 2, wt / 2]}
+        matId={material}
+      />
+
+      {/* Dark interior surfaces */}
+      {/* floor */}
+      <CBox
+        size={[width - wt * 2, 0.02, depth - wallT - wt]}
+        position={[0, 0.01, (depth - wallT + wt) / 2]}
+        color={interiorColor}
+        castShadow={false}
+      />
+      {/* ceiling */}
+      <CBox
+        size={[width - wt * 2, 0.02, depth - wallT - wt]}
+        position={[0, wallH - 0.01, (depth - wallT + wt) / 2]}
+        color={interiorColor}
+        castShadow={false}
+      />
+      {/* left interior wall */}
+      <CBox
+        size={[0.02, wallH, depth - wallT - wt]}
+        position={[-width / 2 + wt + 0.01, wallH / 2, (depth - wallT + wt) / 2]}
+        color={interiorColor}
+        castShadow={false}
+      />
+      {/* right interior wall */}
+      <CBox
+        size={[0.02, wallH, depth - wallT - wt]}
+        position={[width / 2 - wt - 0.01, wallH / 2, (depth - wallT + wt) / 2]}
+        color={interiorColor}
+        castShadow={false}
+      />
+      {/* back interior wall */}
+      <CBox
+        size={[width - wt * 2, wallH, 0.02]}
+        position={[0, wallH / 2, wt + 0.01]}
+        color={interiorColor}
+        castShadow={false}
       />
       {/* …and the garden wall is built as piers + header, leaving a real
           opening so the doors sit recessed with a visible reveal */}
@@ -230,11 +283,6 @@ function GlazedUnit({
 
   return (
     <group>
-      {/* dim interior backstopping the whole opening */}
-      <mesh position={[0, yMid, 0]} material={interiorMaterial()} castShadow={false}>
-        <planeGeometry args={[unitW + 0.16, h + 0.12]} />
-      </mesh>
-
       {/* outer frame — edges tucked behind the piers and header */}
       <mesh position={[0, h + 0.04 + outerT / 2, 0.03]} material={frameMat} castShadow={false}>
         <boxGeometry args={[unitW + outerT * 2, outerT, 0.1]} />
@@ -323,7 +371,7 @@ function RoofEdgeTrim({ w, d, y, z }: { w: number; d: number; y: number; z: numb
   );
 }
 
-/** Flat rooflight — black kerb, dim interior, flush clear glass. */
+/** Flat rooflight — black kerb, flush clear glass (no interior plane). */
 function Rooflight({
   size,
   position,
@@ -336,14 +384,6 @@ function Rooflight({
     <group position={position}>
       <mesh material={kerb} castShadow={false}>
         <boxGeometry args={[size + 0.2, 0.13, size + 0.2]} />
-      </mesh>
-      <mesh
-        position={[0, 0.066, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        material={interiorMaterial()}
-        castShadow={false}
-      >
-        <planeGeometry args={[size, size]} />
       </mesh>
       <mesh
         position={[0, 0.08, 0]}
@@ -371,14 +411,6 @@ function Lantern({
     <group position={position}>
       <mesh material={flatMaterial("#33383d", 0.55)} castShadow={false}>
         <boxGeometry args={[w + 0.18, 0.12, d + 0.18]} />
-      </mesh>
-      <mesh
-        position={[0, 0.062, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        material={interiorMaterial()}
-        castShadow={false}
-      >
-        <planeGeometry args={[w, d]} />
       </mesh>
       {/* unit 4-sided pyramid stretched to the rectangular footprint */}
       <group position={[0, 0.24, 0]} scale={[w, 0.36, d]}>
@@ -412,14 +444,6 @@ function SlopeRooflights({
         <group key={x} position={[x, y, z]} rotation={[theta, 0, 0]}>
           <mesh material={kerb} castShadow={false}>
             <boxGeometry args={[0.95, 0.08, 0.75]} />
-          </mesh>
-          <mesh
-            position={[0, 0.041, 0]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            material={interiorMaterial()}
-            castShadow={false}
-          >
-            <planeGeometry args={[0.85, 0.65]} />
           </mesh>
           <mesh
             position={[0, 0.055, 0]}

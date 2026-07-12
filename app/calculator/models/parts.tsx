@@ -6,7 +6,6 @@ import {
   AnyMaterialId,
   flatMaterial,
   glassMaterial,
-  interiorMaterial,
   metricMaterial,
   TILE_METRES,
 } from "./materials";
@@ -190,10 +189,7 @@ export function Win({
         <FrameRing w={w + 0.02} h={h + 0.02} t={0.055} d={0.06} z={-0.035} material={frame} />
         {/* layer 3 — sash, deepest, carries bars/mullion */}
         <FrameRing w={w - 0.07} h={h - 0.07} t={0.05} d={0.05} z={-0.07} material={frame} />
-        {/* dim interior behind the glazing gives the glass depth */}
-        <mesh position={[0, 0, -0.1]} material={interiorMaterial()} castShadow={false}>
-          <planeGeometry args={[w, h]} />
-        </mesh>
+        {/* transparent glass only — no interior plane blocking the view */}
         <mesh position={[0, 0, -0.085]} material={glassMaterial()} castShadow={false}>
           <planeGeometry args={[w, h]} />
         </mesh>

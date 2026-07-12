@@ -308,13 +308,13 @@ let glassEnv: THREE.Texture | null = null;
 export function glassMaterial(): THREE.MeshPhysicalMaterial {
   if (!glassMat) {
     glassMat = new THREE.MeshPhysicalMaterial({
-      color: "#b8ccd8",
+      color: "#c8dce8",
       metalness: 0,
       roughness: 0.05,
       transparent: true,
-      opacity: 0.3,
+      opacity: 0.15,
       ior: 1.5,
-      envMapIntensity: 1.4,
+      envMapIntensity: 1.2,
       envMap: glassEnv,
     });
   }
@@ -333,7 +333,18 @@ export function setGlassEnvMap(tex: THREE.Texture | null) {
   }
 }
 
-/** The dim room seen behind clear glazing — dark so glass reads as glass. */
+let interiorMat: THREE.MeshStandardMaterial | null = null;
+
+/** The dim room seen behind clear glazing — semi-transparent dark plane. */
 export function interiorMaterial(): THREE.MeshStandardMaterial {
-  return flatMaterial("#31363a", 0.95);
+  if (!interiorMat) {
+    interiorMat = new THREE.MeshStandardMaterial({
+      color: "#1a1d1f",
+      roughness: 0.95,
+      transparent: true,
+      opacity: 0.7,
+      side: THREE.DoubleSide,
+    });
+  }
+  return interiorMat;
 }

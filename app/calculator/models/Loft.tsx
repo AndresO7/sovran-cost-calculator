@@ -4,7 +4,6 @@ import { LoftFinishId, LoftTypeId } from "../config";
 import {
   flatMaterial,
   glassMaterial,
-  interiorMaterial,
   metricMaterial,
   TILE_METRES,
 } from "./materials";
@@ -64,14 +63,38 @@ function BoxDormer(props: LoftProps) {
     () => [-1, 1].map((s) => ({ x: s * w * 0.22, y: h / 2, w: winW, h: winH })),
     [w, h]
   );
+  const interiorColor = "#1a1e21";
+
   return (
     <group ref={ref}>
-      {/* body core; the front facade is a separate panel with real punched
-          openings so the glazing sits in genuine reveals */}
+      {/* Hollow dormer — left/right/back walls only, front has punched openings */}
+      {/* LEFT wall */}
       <TexBox
-        size={[w, h, bodyD]}
-        position={[0, baseY + h / 2, bodyZ]}
+        size={[wallT, h, bodyD]}
+        position={[-w / 2 + wallT / 2, baseY + h / 2, bodyZ]}
         matId="zincPanels"
+      />
+      {/* RIGHT wall */}
+      <TexBox
+        size={[wallT, h, bodyD]}
+        position={[w / 2 - wallT / 2, baseY + h / 2, bodyZ]}
+        matId="zincPanels"
+      />
+      {/* BACK wall */}
+      <TexBox
+        size={[w - wallT * 2, h, wallT]}
+        position={[0, baseY + h / 2, bodyZ - bodyD / 2 + wallT / 2]}
+        matId="zincPanels"
+      />
+      {/* Dark interior surfaces */}
+      <DormerInterior
+        w={w}
+        h={h}
+        d={bodyD}
+        wallT={wallT}
+        baseY={baseY}
+        bodyZ={bodyZ}
+        color={interiorColor}
       />
       <WallWithOpenings
         w={w}
@@ -121,10 +144,7 @@ function RecessedGlazing({
 }) {
   return (
     <group position={position}>
-      {/* panes oversail the opening so no gap shows at the reveal edges */}
-      <mesh position={[0, 0, -depth - 0.02]} material={interiorMaterial()} castShadow={false}>
-        <planeGeometry args={[w + 0.04, h + 0.04]} />
-      </mesh>
+      {/* transparent glass only — no interior plane blocking the view */}
       <mesh position={[0, 0, -depth]} material={glassMaterial()} castShadow={false}>
         <planeGeometry args={[w + 0.04, h + 0.04]} />
       </mesh>
@@ -225,6 +245,8 @@ function MansardDormer(props: LoftProps) {
     return m;
   }, [finish]);
 
+  const mansardInterior = flatMaterial("#1a1e21", 0.95);
+
   return (
     <group ref={ref}>
       {/* steep slated face with the windows set into it */}
@@ -236,6 +258,10 @@ function MansardDormer(props: LoftProps) {
         {([-1, 1] as const).map((s) => (
           <DormerWindow key={s} w={0.92} h={1.5} position={[s * w * 0.22, 0.12, 0.07]} />
         ))}
+        {/* Dark interior wall behind the slated face */}
+        <mesh position={[0, 0, -0.08]} material={mansardInterior}>
+          <boxGeometry args={[w - 0.3, faceLen - 0.2, 0.02]} />
+        </mesh>
       </group>
 
       {/* slate cheeks close the sides */}
@@ -304,6 +330,54 @@ function DormerWindow({
       />
       {/* the stepped sash recedes from here back towards the face plane */}
       <Win w={w} h={h} bars={false} mullion frameColor="#2e3338" position={[0, 0, 0.11]} />
+    </group>
+  );
+}
+
+/** Dark interior surfaces for the dormer, visible through windows. */
+function DormerInterior({
+  w,
+  h,
+  d,
+  wallT,
+  baseY,
+  bodyZ,
+  color,
+}: {
+  w: number;
+  h: number;
+  d: number;
+  wallT: number;
+  baseY: number;
+  bodyZ: number;
+  color: string;
+}) {
+  const mat = flatMaterial(color, 0.95);
+  const innerW = w - wallT * 2;
+  const innerD = d - wallT;
+
+  return (
+    <group>
+      {/* floor */}
+      <mesh position={[0, baseY + 0.01, bodyZ]} material={mat}>
+        <boxGeometry args={[innerW, 0.02, innerD]} />
+      </mesh>
+      {/* ceiling */}
+      <mesh position={[0, baseY + h - 0.01, bodyZ]} material={mat}>
+        <boxGeometry args={[innerW, 0.02, innerD]} />
+      </mesh>
+      {/* left interior wall */}
+      <mesh position={[-w / 2 + wallT + 0.01, baseY + h / 2, bodyZ]} material={mat}>
+        <boxGeometry args={[0.02, h, innerD]} />
+      </mesh>
+      {/* right interior wall */}
+      <mesh position={[w / 2 - wallT - 0.01, baseY + h / 2, bodyZ]} material={mat}>
+        <boxGeometry args={[0.02, h, innerD]} />
+      </mesh>
+      {/* back interior wall */}
+      <mesh position={[0, baseY + h / 2, bodyZ - innerD / 2 + 0.01]} material={mat}>
+        <boxGeometry args={[innerW, h, 0.02]} />
+      </mesh>
     </group>
   );
 }
