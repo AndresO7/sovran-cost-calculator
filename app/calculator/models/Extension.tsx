@@ -10,7 +10,7 @@ import {
   LoftFinishId,
   MaterialId,
 } from "../config";
-import { flatMaterial, glassMaterial } from "./materials";
+import { flatMaterial, glassMaterial, lightWashMaterial } from "./materials";
 import { CBox, LeanTo, TexBox } from "./parts";
 
 const EXT_WALL_H = 2.85;
@@ -231,22 +231,49 @@ export function Extension({
         />
       </group>
 
-      {/* warm wall lights flanking the doors */}
-      {([-1, 1] as const).map((s) => (
-        <mesh
-          key={s}
-          position={[s * (width / 2 - 0.22), wallH - 0.5, depth + 0.045]}
-          castShadow={false}
-        >
-          <boxGeometry args={[0.09, 0.3, 0.07]} />
-          <meshStandardMaterial
-            color="#2f3236"
-            emissive="#d08a4e"
-            emissiveIntensity={0.75}
-            roughness={0.5}
-          />
-        </mesh>
-      ))}
+      {/* corten wall sconces near the corners, washing the wall — like the reference */}
+      {([-1, 1] as const).map((s) => {
+        const x = s * (width / 2 - 0.28);
+        const washW = 1.45;
+        // top of the cone tucks behind the sconce so the light reads as
+        // spilling straight out of the fixture
+        const washH = wallH - 0.5;
+        return (
+          <group key={s} position={[x, 0, depth]}>
+            {/* corten sconce body, mid-height on the wall */}
+            <mesh position={[0, wallH - 0.45, 0.055]} castShadow={false}>
+              <boxGeometry args={[0.1, 0.28, 0.09]} />
+              <meshStandardMaterial
+                color="#b0552e"
+                emissive="#c96f3a"
+                emissiveIntensity={0.25}
+                roughness={0.55}
+              />
+            </mesh>
+            {/* glowing lens on the underside */}
+            <mesh
+              position={[0, wallH - 0.592, 0.055]}
+              rotation={[-Math.PI / 2, 0, 0]}
+              castShadow={false}
+            >
+              <circleGeometry args={[0.04, 16]} />
+              <meshStandardMaterial
+                color="#ffffff"
+                emissive="#ffedc9"
+                emissiveIntensity={2.2}
+              />
+            </mesh>
+            {/* wide cone of light washing down the wall, centred on the sconce */}
+            <mesh
+              position={[0, washH / 2 + 0.05, 0.02]}
+              material={lightWashMaterial()}
+              castShadow={false}
+            >
+              <planeGeometry args={[washW, washH]} />
+            </mesh>
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -478,15 +505,19 @@ function SlopeRooflights({
   const theta = Math.atan2(PITCH_RISE, run);
   const z = depth * 0.45;
   const y = wallH + PITCH_RISE * (1 - z / run) + 0.06;
-  // smaller units, spread further apart, chunky kerb frame — like the reference
-  const spread = width * 0.33;
+  // large units with outer margins wider than the gaps between them — like the reference
+  const spread = width * 0.28;
+  const kerbW = 1.2;
+  const kerbD = 1.45;
+  const glassW = 1.04;
+  const glassD = 1.28;
   const kerb = flatMaterial("#22262b", 0.55);
   return (
     <>
       {[-spread, 0, spread].map((x) => (
         <group key={x} position={[x, y, z]} rotation={[theta, 0, 0]}>
           <mesh material={kerb} castShadow={false}>
-            <boxGeometry args={[0.8, 0.08, 0.62]} />
+            <boxGeometry args={[kerbW, 0.08, kerbD]} />
           </mesh>
           {/* lit interior seen through the glazing */}
           <mesh
@@ -495,7 +526,7 @@ function SlopeRooflights({
             material={flatMaterial("#b8b0a1", 0.95)}
             castShadow={false}
           >
-            <planeGeometry args={[0.58, 0.42]} />
+            <planeGeometry args={[glassW, glassD]} />
           </mesh>
           <mesh
             position={[0, 0.055, 0]}
@@ -503,7 +534,7 @@ function SlopeRooflights({
             material={glassMaterial()}
             castShadow={false}
           >
-            <planeGeometry args={[0.58, 0.42]} />
+            <planeGeometry args={[glassW, glassD]} />
           </mesh>
         </group>
       ))}

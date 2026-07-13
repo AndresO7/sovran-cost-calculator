@@ -37,7 +37,7 @@ export default function Scene({ state }: { state: CalculatorState }) {
 
   return (
     <Canvas
-      shadows
+      shadows="percentage"
       dpr={[1, 2]}
       camera={{ position: [13.5, 8.5, 14.5], fov: 36 }}
       gl={{ antialias: true }}

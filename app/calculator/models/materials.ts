@@ -333,6 +333,57 @@ export function setGlassEnvMap(tex: THREE.Texture | null) {
   }
 }
 
+let washMat: THREE.MeshBasicMaterial | null = null;
+
+/**
+ * Soft cone of warm light for the facade downlights — an additive gradient
+ * plane laid flush on the wall, so the fixtures read as lit without adding
+ * real lights to the analytic rig.
+ */
+export function lightWashMaterial(): THREE.MeshBasicMaterial {
+  if (!washMat) {
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+    // downward cone: narrow at the fixture, splaying wide open by the ground
+    const grad = ctx.createLinearGradient(0, 0, 0, size);
+    grad.addColorStop(0, "rgba(255, 243, 216, 0.9)");
+    grad.addColorStop(0.5, "rgba(255, 240, 210, 0.45)");
+    grad.addColorStop(1, "rgba(255, 238, 205, 0)");
+    ctx.filter = "blur(12px)";
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(size * 0.44, 10);
+    ctx.lineTo(size * 0.56, 10);
+    ctx.lineTo(size * 0.98, size);
+    ctx.lineTo(size * 0.02, size);
+    ctx.closePath();
+    ctx.fill();
+    // hotspot right under the lamp head
+    const hot = ctx.createRadialGradient(size / 2, 16, 2, size / 2, 16, 36);
+    hot.addColorStop(0, "rgba(255, 250, 235, 0.95)");
+    hot.addColorStop(1, "rgba(255, 250, 235, 0)");
+    ctx.filter = "blur(4px)";
+    ctx.fillStyle = hot;
+    ctx.beginPath();
+    ctx.arc(size / 2, 16, 38, 0, Math.PI * 2);
+    ctx.fill();
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    washMat = new THREE.MeshBasicMaterial({
+      map: tex,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+  }
+  return washMat;
+}
+
 let interiorMat: THREE.MeshStandardMaterial | null = null;
 
 /** The dim room seen behind clear glazing — semi-transparent dark plane. */

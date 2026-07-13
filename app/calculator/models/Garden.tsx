@@ -122,13 +122,50 @@ function PlinthTrim({ w, d, z }: { w: number; d: number; z: number }) {
   );
 }
 
+// hand-tuned leaf fan so both planters look identical on every load —
+// outer leaves splay wide, the inner pair stands tall and near-vertical
+const LEAVES = [
+  { yaw: 0.0, tilt: 0.55, len: 0.62, color: "#4d6a31" },
+  { yaw: 0.9, tilt: 0.4, len: 0.72, color: "#5c7c3b" },
+  { yaw: 1.7, tilt: 0.62, len: 0.55, color: "#46612d" },
+  { yaw: 2.6, tilt: 0.35, len: 0.78, color: "#557436" },
+  { yaw: 3.4, tilt: 0.58, len: 0.6, color: "#4d6a31" },
+  { yaw: 4.2, tilt: 0.45, len: 0.7, color: "#5c7c3b" },
+  { yaw: 5.0, tilt: 0.65, len: 0.52, color: "#46612d" },
+  { yaw: 5.8, tilt: 0.38, len: 0.75, color: "#557436" },
+  { yaw: 2.1, tilt: 0.12, len: 0.85, color: "#527033" },
+  { yaw: 4.6, tilt: 0.15, len: 0.8, color: "#5c7c3b" },
+];
+
 function Planter({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
-      <CBox size={[0.52, 0.48, 0.52]} position={[0, 0.24, 0]} color="#1b1b1b" roughness={0.6} />
-      <mesh position={[0, 0.78, 0]} material={flatMaterial("#3c4a2c", 1)} castShadow>
-        <icosahedronGeometry args={[0.36, 1]} />
+      {/* tapered concrete pot */}
+      <mesh position={[0, 0.26, 0]} material={flatMaterial("#9c9585", 0.9)} castShadow>
+        <cylinderGeometry args={[0.3, 0.22, 0.52, 20]} />
       </mesh>
+      {/* soil */}
+      <mesh
+        position={[0, 0.525, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        material={flatMaterial("#2e2620", 1)}
+        castShadow={false}
+      >
+        <circleGeometry args={[0.27, 20]} />
+      </mesh>
+      {/* leafy shrub — flattened cones fanned out from the soil */}
+      {LEAVES.map((leaf, i) => (
+        <group key={i} position={[0, 0.5, 0]} rotation={[0, leaf.yaw, leaf.tilt]}>
+          <mesh
+            position={[0, leaf.len / 2, 0]}
+            scale={[1, 1, 0.4]}
+            material={flatMaterial(leaf.color, 0.9)}
+            castShadow
+          >
+            <coneGeometry args={[0.055, leaf.len, 6]} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
