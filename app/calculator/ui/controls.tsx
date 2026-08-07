@@ -1,6 +1,6 @@
 "use client";
 
-import { CSSProperties, ReactNode } from "react";
+import { CSSProperties, ReactNode, useState } from "react";
 
 export const ACCENT = "#b8944e";
 export const FG = "#1a1916";
@@ -69,65 +69,295 @@ export function Section({
   );
 }
 
-/* -------------------------------- size picker ------------------------------- */
+/* ----------------------------------- slider --------------------------------- */
 
-interface SizeOptionView {
-  id: string;
-  label: string;
-  description: string;
-  area: number;
-}
-
-export function SizePicker({
-  options,
+/**
+ * Hairline range slider with a Didone read-out — used for the continuous
+ * dimensions the pricing guide takes as inputs (extension depth, loft depth).
+ */
+export function Slider({
   value,
+  min,
+  max,
+  step,
   onChange,
+  readout,
+  caption,
+  label,
 }: {
-  options: SizeOptionView[];
-  value: string;
-  onChange: (id: string) => void;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+  /** the headline figure, e.g. "4.0 m" */
+  readout: string;
+  /** the derived line underneath, e.g. "26.4 m² gross internal area" */
+  caption?: string;
+  label: string;
 }) {
-  const selected = options.find((o) => o.id === value);
+  const pct = ((value - min) / (max - min)) * 100;
   return (
     <div>
-      <div style={{ display: "flex", gap: 14 }}>
-        {options.map((o) => {
-          const active = o.id === value;
-          return (
-            <button
-              key={o.id}
-              onClick={() => onChange(o.id)}
-              aria-pressed={active}
-              style={{
-                width: 46,
-                height: 46,
-                borderRadius: "50%",
-                border: `1px solid ${active ? ACCENT : "rgba(26,25,22,0.18)"}`,
-                background: active ? "rgba(201,169,110,0.1)" : "transparent",
-                color: active ? ACCENT : MUTED,
-                fontFamily: "var(--font-bodoni)",
-                fontWeight: 600,
-                fontSize: 16,
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-              }}
-            >
-              {o.label}
-            </button>
-          );
-        })}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          marginBottom: 12,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: "var(--font-bodoni)",
+            fontWeight: 600,
+            fontSize: 22,
+            color: FG,
+            fontVariantNumeric: "tabular-nums",
+            lineHeight: 1,
+          }}
+        >
+          {readout}
+        </span>
+        {caption && (
+          <span
+            style={{
+              fontFamily: "var(--font-outfit)",
+              fontWeight: 300,
+              fontSize: 11.5,
+              letterSpacing: "0.06em",
+              color: MUTED,
+            }}
+          >
+            {caption}
+          </span>
+        )}
       </div>
-      {selected && (
-        <div style={{ marginTop: 14 }}>
-          <div style={{ fontFamily: "var(--font-outfit)", fontWeight: 400, fontSize: 13.5, color: FG }}>
-            {selected.description}
-          </div>
-          <div style={{ fontFamily: "var(--font-outfit)", fontWeight: 300, fontSize: 11.5, color: MUTED, marginTop: 3, letterSpacing: "0.06em" }}>
-            {selected.area} m² gross internal area
-          </div>
-        </div>
-      )}
+      <input
+        className="calc-slider"
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        aria-label={label}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={
+          {
+            width: "100%",
+            "--calc-slider-pct": `${pct}%`,
+          } as CSSProperties
+        }
+      />
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginTop: 8,
+          fontFamily: "var(--font-outfit)",
+          fontWeight: 300,
+          fontSize: 10,
+          letterSpacing: "0.14em",
+          color: FAINT,
+        }}
+      >
+        <span>{min} m</span>
+        <span>{max} m</span>
+      </div>
     </div>
+  );
+}
+
+/* -------------------------------- number field ------------------------------ */
+
+/**
+ * Numeric entry that commits on blur or Enter rather than per keystroke —
+ * clamping mid-typing would fight the user (typing "40" would snap at "4").
+ */
+export function NumberField({
+  value,
+  min,
+  max,
+  suffix,
+  label,
+  onCommit,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  suffix: string;
+  label: string;
+  onCommit: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  const [seen, setSeen] = useState(value);
+
+  // follow the value when something else changes it — e.g. the depth slider.
+  // Adjusted during render rather than in an effect, so the field never paints
+  // a stale figure first.
+  if (value !== seen) {
+    setSeen(value);
+    setDraft(String(value));
+  }
+
+  const commit = () => {
+    const n = Number(draft.replace(",", "."));
+    if (draft.trim() === "" || !Number.isFinite(n)) {
+      setDraft(String(value));
+      return;
+    }
+    onCommit(Math.min(max, Math.max(min, n)));
+  };
+
+  return (
+    <label
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        border: `1px solid ${LINE}`,
+        padding: "9px 12px",
+        cursor: "text",
+      }}
+    >
+      <span
+        style={{
+          fontFamily: "var(--font-outfit)",
+          fontWeight: 300,
+          fontSize: 10,
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+          color: FAINT,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {label}
+      </span>
+      <input
+        value={draft}
+        inputMode="decimal"
+        aria-label={`${label} in ${suffix}`}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
+        }}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          width: "100%",
+          background: "transparent",
+          border: "none",
+          outline: "none",
+          textAlign: "right",
+          fontFamily: "var(--font-bodoni)",
+          fontWeight: 600,
+          fontSize: 16,
+          color: FG,
+          fontVariantNumeric: "tabular-nums",
+        }}
+      />
+      <span
+        style={{
+          fontFamily: "var(--font-outfit)",
+          fontWeight: 300,
+          fontSize: 12,
+          color: MUTED,
+        }}
+      >
+        {suffix}
+      </span>
+    </label>
+  );
+}
+
+/* ----------------------------------- toggle --------------------------------- */
+
+/** Hairline switch for including or omitting a whole project. */
+export function Toggle({
+  checked,
+  onChange,
+  label,
+  hint,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+  hint?: string;
+}) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      role="switch"
+      aria-checked={checked}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        width: "100%",
+        padding: "12px 14px",
+        textAlign: "left",
+        cursor: "pointer",
+        background: checked ? "rgba(201,169,110,0.06)" : "transparent",
+        border: `1px solid ${checked ? "rgba(201,169,110,0.65)" : LINE}`,
+        transition: "all 0.3s ease",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          position: "relative",
+          width: 34,
+          height: 18,
+          flexShrink: 0,
+          borderRadius: 9,
+          border: `1px solid ${checked ? ACCENT : "rgba(26,25,22,0.25)"}`,
+          background: checked ? "rgba(201,169,110,0.22)" : "transparent",
+          transition: "all 0.3s ease",
+        }}
+      >
+        <span
+          style={{
+            position: "absolute",
+            top: 3,
+            left: checked ? 18 : 3,
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: checked ? ACCENT : "rgba(26,25,22,0.35)",
+            transition: "all 0.3s ease",
+          }}
+        />
+      </span>
+      <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <span
+          style={{
+            fontFamily: "var(--font-outfit)",
+            fontWeight: 400,
+            fontSize: 13,
+            color: checked ? FG : MUTED,
+          }}
+        >
+          {label}
+        </span>
+        {hint && (
+          <span
+            style={{
+              fontFamily: "var(--font-outfit)",
+              fontWeight: 300,
+              fontSize: 11,
+              letterSpacing: "0.05em",
+              color: FAINT,
+            }}
+          >
+            {hint}
+          </span>
+        )}
+      </span>
+    </button>
   );
 }
 
@@ -156,7 +386,8 @@ const SWATCH_STYLES: Record<string, CSSProperties> = {
   zincRoof: {
     background: "repeating-linear-gradient(90deg, #5b6066 0px 8px, #3c4045 8px 9.5px)",
   },
-  anthracite: { background: "#2b2e33" },
+  black: { background: "#16181a" },
+  anthracite: { background: "#3f4449" },
   bronze: { background: "linear-gradient(135deg, #7a6442 0%, #5e4a30 100%)" },
   white: { background: "#e6e0d4" },
   york: {
@@ -241,7 +472,10 @@ export function SwatchRow({
 interface CardOptionView {
   id: string;
   label: string;
-  price: number;
+  /** flat uplift; omit when the option is priced some other way */
+  price?: number;
+  /** shown in place of the price tag, e.g. a per-metre rate */
+  meta?: string;
   icon: ReactNode;
 }
 
@@ -303,10 +537,95 @@ export function OptionGrid({
                 fontWeight: 300,
                 fontSize: 9.5,
                 letterSpacing: "0.08em",
-                color: o.price === 0 ? FAINT : ACCENT,
+                color: o.meta || o.price ? ACCENT : FAINT,
+                minHeight: 12,
               }}
             >
-              {priceTag(o.price)}
+              {o.meta ?? (o.price === undefined ? "" : priceTag(o.price))}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ------------------------------- tier picker -------------------------------- */
+
+interface TierOptionView {
+  id: string;
+  label: string;
+  description: string;
+  /** the £/m² band this tier commands in the current zone */
+  rate: string;
+}
+
+/** Two stacked cards showing what each specification level costs per m². */
+export function TierPicker({
+  options,
+  value,
+  onChange,
+}: {
+  options: TierOptionView[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+      {options.map((o) => {
+        const active = o.id === value;
+        return (
+          <button
+            key={o.id}
+            onClick={() => onChange(o.id)}
+            aria-pressed={active}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              width: "100%",
+              textAlign: "left",
+              padding: "13px 15px",
+              cursor: "pointer",
+              border: `1px solid ${active ? "rgba(201,169,110,0.65)" : LINE}`,
+              background: active ? "rgba(201,169,110,0.06)" : "transparent",
+              transition: "all 0.3s ease",
+            }}
+          >
+            <span style={{ display: "flex", flexDirection: "column", gap: 3, flex: 1 }}>
+              <span
+                style={{
+                  fontFamily: "var(--font-outfit)",
+                  fontWeight: 400,
+                  fontSize: 13.5,
+                  color: active ? FG : MUTED,
+                }}
+              >
+                {o.label}
+              </span>
+              <span
+                style={{
+                  fontFamily: "var(--font-outfit)",
+                  fontWeight: 300,
+                  fontSize: 11,
+                  lineHeight: 1.5,
+                  color: FAINT,
+                }}
+              >
+                {o.description}
+              </span>
+            </span>
+            <span
+              style={{
+                fontFamily: "var(--font-bodoni)",
+                fontWeight: 500,
+                fontSize: 12.5,
+                whiteSpace: "nowrap",
+                color: active ? ACCENT : MUTED,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {o.rate}
             </span>
           </button>
         );
@@ -355,6 +674,12 @@ const S: CSSProperties = { display: "block" };
 const stroke = { stroke: "currentColor", strokeWidth: 1.2, fill: "none" } as const;
 
 export const Icons = {
+  flat: (
+    <svg width="34" height="26" viewBox="0 0 34 26" style={S}>
+      <rect x="4" y="8" width="26" height="14" {...stroke} />
+      <line x1="2" y1="8" x2="32" y2="8" {...stroke} />
+    </svg>
+  ),
   rooflights: (
     <svg width="34" height="26" viewBox="0 0 34 26" style={S}>
       <rect x="4" y="8" width="26" height="14" {...stroke} />
@@ -419,6 +744,46 @@ export const Icons = {
       <rect x="8" y="13" width="18" height="9" {...stroke} />
       <rect x="12" y="6.5" width="3.4" height="4" {...stroke} />
       <rect x="18.5" y="6.5" width="3.4" height="4" {...stroke} />
+    </svg>
+  ),
+  // interior layouts, drawn as plans: bed symbols in rooms, hatched wet areas
+  layoutA: (
+    <svg width="34" height="26" viewBox="0 0 34 26" style={S}>
+      <rect x="4" y="4" width="26" height="18" {...stroke} />
+      <rect x="12" y="8" width="10" height="10" {...stroke} />
+      <line x1="12" y1="11" x2="22" y2="11" {...stroke} />
+    </svg>
+  ),
+  layoutB: (
+    <svg width="34" height="26" viewBox="0 0 34 26" style={S}>
+      <rect x="4" y="4" width="26" height="18" {...stroke} />
+      <line x1="21" y1="4" x2="21" y2="22" {...stroke} />
+      <rect x="8" y="8" width="9" height="10" {...stroke} />
+      <line x1="8" y1="11" x2="17" y2="11" {...stroke} />
+      <circle cx="25.5" cy="12" r="2.4" {...stroke} />
+    </svg>
+  ),
+  layoutC: (
+    <svg width="34" height="26" viewBox="0 0 34 26" style={S}>
+      <rect x="4" y="4" width="26" height="18" {...stroke} />
+      <line x1="17" y1="4" x2="17" y2="22" {...stroke} />
+      <line x1="17" y1="15" x2="30" y2="15" {...stroke} />
+      <rect x="7" y="8" width="7" height="9" {...stroke} />
+      <line x1="7" y1="10.6" x2="14" y2="10.6" {...stroke} />
+      <rect x="19.5" y="6" width="8" height="7" {...stroke} />
+      <line x1="19.5" y1="8.2" x2="27.5" y2="8.2" {...stroke} />
+    </svg>
+  ),
+  layoutD: (
+    <svg width="34" height="26" viewBox="0 0 34 26" style={S}>
+      <rect x="4" y="4" width="26" height="18" {...stroke} />
+      <line x1="19" y1="4" x2="19" y2="22" {...stroke} />
+      <line x1="19" y1="13" x2="30" y2="13" {...stroke} />
+      <rect x="7" y="8" width="9" height="10" {...stroke} />
+      <line x1="7" y1="11" x2="16" y2="11" {...stroke} />
+      <circle cx="24.5" cy="8.5" r="2.1" {...stroke} />
+      <line x1="21" y1="18" x2="28" y2="18" {...stroke} />
+      <line x1="24.5" y1="18" x2="24.5" y2="21" {...stroke} />
     </svg>
   ),
 } satisfies Record<string, ReactNode>;

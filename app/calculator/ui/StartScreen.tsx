@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
-import { CalculatorAction } from "../state";
+import { CalculatorAction, LocationState } from "../state";
+import { lookupPostcode, LookupStatus, ZONES } from "../zones";
 import { ACCENT, Arrow, FAINT, FG, GHOST, LINE, microLabel, MUTED } from "./controls";
 
 type Focus = "ground" | "loft" | "both";
@@ -56,6 +57,16 @@ const FOCUS_OPTIONS: Array<{ id: Focus; label: string; blurb: string; icon: Reac
   },
 ];
 
+const footnote: React.CSSProperties = {
+  fontFamily: "var(--font-outfit)",
+  fontWeight: 300,
+  fontSize: 11,
+  letterSpacing: "0.06em",
+  lineHeight: 1.7,
+  color: FAINT,
+  marginTop: 14,
+};
+
 const optionRow: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
@@ -70,13 +81,28 @@ const optionRow: React.CSSProperties = {
   color: "rgba(26,25,22,0.55)",
 };
 
+/** Zone 2 covers Greater London and the rest of the UK — the safe fallback. */
+const FALLBACK: LocationState = {
+  postcode: "",
+  zone: "zone2",
+  borough: null,
+  status: "idle",
+};
+
 /**
- * Title-sheet intro: one question — what are you extending — then straight
- * into the configurator.
+ * Title-sheet intro: two questions — what are you extending, and where is the
+ * property — then straight into the configurator. The postcode resolves to a
+ * pricing zone, so the first figure the user sees is already right.
  */
 export function StartScreen({ dispatch }: { dispatch: React.Dispatch<CalculatorAction> }) {
+  const [step, setStep] = useState<"focus" | "postcode">("focus");
+  const [focus, setFocus] = useState<Focus>("ground");
+  const [postcode, setPostcode] = useState("");
+  const [status, setStatus] = useState<LookupStatus>("idle");
+  const [resolved, setResolved] = useState<LocationState | null>(null);
   const [leaving, setLeaving] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const stepRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -92,15 +118,55 @@ export function StartScreen({ dispatch }: { dispatch: React.Dispatch<CalculatorA
     return () => ctx.revert();
   }, []);
 
-  const begin = (focus: Focus) => {
+  // fade the question column when swapping between the two steps
+  useEffect(() => {
+    if (step !== "postcode" || !stepRef.current) return;
+    gsap.from(stepRef.current, { y: 16, opacity: 0, duration: 0.5, ease: "power3.out" });
+  }, [step]);
+
+  const begin = (location: LocationState) => {
     if (leaving) return;
     setLeaving(true);
     gsap.to(rootRef.current, {
       opacity: 0,
       duration: 0.5,
       ease: "power2.in",
-      onComplete: () => dispatch({ type: "BEGIN", focus }),
+      onComplete: () => dispatch({ type: "BEGIN", focus, location }),
     });
+  };
+
+  const chooseFocus = (f: Focus) => {
+    setFocus(f);
+    setStep("postcode");
+  };
+
+  const lookup = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    // already resolved and unedited — this press is the "Begin" press
+    if (resolved) return begin(resolved);
+    if (!postcode.trim() || status === "loading") return;
+
+    setStatus("loading");
+    try {
+      const hit = await lookupPostcode(postcode);
+      const location: LocationState = {
+        postcode: hit.postcode,
+        zone: hit.zone,
+        borough: hit.borough,
+        status: "ok",
+      };
+      setPostcode(hit.postcode);
+      setResolved(location);
+      setStatus("ok");
+    } catch (err) {
+      setStatus((err as Error)?.message === "notfound" ? "notfound" : "error");
+    }
+  };
+
+  const editPostcode = (value: string) => {
+    setPostcode(value);
+    if (resolved) setResolved(null);
+    if (status !== "idle") setStatus("idle");
   };
 
   return (
@@ -209,78 +275,281 @@ export function StartScreen({ dispatch }: { dispatch: React.Dispatch<CalculatorA
             paddingBottom: "4vh",
           }}
         >
-          <div data-intro style={{ width: "100%", maxWidth: 520 }}>
+          <div data-intro ref={stepRef} style={{ width: "100%", maxWidth: 520 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 16 }}>
               <span style={{ fontFamily: "var(--font-bodoni)", fontStyle: "italic", color: ACCENT, fontSize: 15 }}>
-                01
+                {step === "focus" ? "01" : "02"}
               </span>
               <span style={{ ...microLabel, color: "rgba(26,25,22,0.55)" }}>
-                What do you want to extend?
+                {step === "focus"
+                  ? "What do you want to extend?"
+                  : "Where is the property?"}
               </span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {FOCUS_OPTIONS.map((o) => (
+              {step === "postcode" && (
                 <button
-                  key={o.id}
-                  onClick={() => begin(o.id)}
-                  style={optionRow}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(184,148,78,0.6)";
-                    e.currentTarget.style.background = "rgba(184,148,78,0.08)";
-                    e.currentTarget.style.transform = "translateX(4px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(26,25,22,0.1)";
-                    e.currentTarget.style.background = "rgba(26,25,22,0.02)";
-                    e.currentTarget.style.transform = "translateX(0)";
+                  onClick={() => setStep("focus")}
+                  style={{
+                    marginLeft: "auto",
+                    fontFamily: "var(--font-outfit)",
+                    fontWeight: 300,
+                    fontSize: 11,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: FAINT,
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
                   }}
                 >
-                  {o.icon}
-                  <span style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                    <span
-                      style={{
-                        fontFamily: "var(--font-outfit)",
-                        fontWeight: 400,
-                        fontSize: "clamp(14px, 1.15vw, 16.5px)",
-                        letterSpacing: "0.05em",
-                        color: "rgba(26,25,22,0.85)",
-                      }}
-                    >
-                      {o.label}
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: "var(--font-outfit)",
-                        fontWeight: 300,
-                        fontSize: 11.5,
-                        letterSpacing: "0.06em",
-                        color: FAINT,
-                      }}
-                    >
-                      {o.blurb}
-                    </span>
-                  </span>
-                  <span className="row-arrow" style={{ marginLeft: "auto", color: ACCENT, opacity: 0.45 }}>
-                    <Arrow />
-                  </span>
+                  ← Back
                 </button>
-              ))}
+              )}
             </div>
-            <p
-              style={{
-                fontFamily: "var(--font-outfit)",
-                fontWeight: 300,
-                fontSize: 11,
-                letterSpacing: "0.06em",
-                color: FAINT,
-                marginTop: 14,
-              }}
-            >
-              You can change any of this later in the configurator.
-            </p>
+
+            {step === "focus" ? (
+              <>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {FOCUS_OPTIONS.map((o) => (
+                    <button
+                      key={o.id}
+                      onClick={() => chooseFocus(o.id)}
+                      style={optionRow}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = "rgba(184,148,78,0.6)";
+                        e.currentTarget.style.background = "rgba(184,148,78,0.08)";
+                        e.currentTarget.style.transform = "translateX(4px)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = "rgba(26,25,22,0.1)";
+                        e.currentTarget.style.background = "rgba(26,25,22,0.02)";
+                        e.currentTarget.style.transform = "translateX(0)";
+                      }}
+                    >
+                      {o.icon}
+                      <span style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                        <span
+                          style={{
+                            fontFamily: "var(--font-outfit)",
+                            fontWeight: 400,
+                            fontSize: "clamp(14px, 1.15vw, 16.5px)",
+                            letterSpacing: "0.05em",
+                            color: "rgba(26,25,22,0.85)",
+                          }}
+                        >
+                          {o.label}
+                        </span>
+                        <span
+                          style={{
+                            fontFamily: "var(--font-outfit)",
+                            fontWeight: 300,
+                            fontSize: 11.5,
+                            letterSpacing: "0.06em",
+                            color: FAINT,
+                          }}
+                        >
+                          {o.blurb}
+                        </span>
+                      </span>
+                      <span className="row-arrow" style={{ marginLeft: "auto", color: ACCENT, opacity: 0.45 }}>
+                        <Arrow />
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <p style={footnote}>
+                  You can change any of this later in the configurator.
+                </p>
+              </>
+            ) : (
+              <PostcodeStep
+                postcode={postcode}
+                status={status}
+                resolved={resolved}
+                onEdit={editPostcode}
+                onSubmit={lookup}
+                onSkip={() => begin({ ...FALLBACK, postcode: postcode.trim() })}
+              />
+            )}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Postcode question. Resolving is a two-press affair on purpose: the first
+ * press looks the postcode up and shows the borough and zone it landed in,
+ * the second confirms it — so nobody is priced against a zone they never saw.
+ */
+function PostcodeStep({
+  postcode,
+  status,
+  resolved,
+  onEdit,
+  onSubmit,
+  onSkip,
+}: {
+  postcode: string;
+  status: LookupStatus;
+  resolved: LocationState | null;
+  onEdit: (value: string) => void;
+  onSubmit: (e: FormEvent<HTMLFormElement>) => void;
+  onSkip: () => void;
+}) {
+  const loading = status === "loading";
+  const zone = resolved ? ZONES[resolved.zone] : null;
+
+  return (
+    <form onSubmit={onSubmit} noValidate>
+      <p
+        style={{
+          fontFamily: "var(--font-outfit)",
+          fontWeight: 300,
+          fontSize: "clamp(12.5px, 1vw, 14px)",
+          lineHeight: 1.8,
+          color: MUTED,
+          marginBottom: 18,
+        }}
+      >
+        Build rates vary sharply across London. Your postcode sets the rate
+        band your estimate is calculated against.
+      </p>
+
+      <div style={{ display: "flex", alignItems: "stretch", gap: 10 }}>
+        <input
+          name="postcode"
+          value={postcode}
+          onChange={(e) => onEdit(e.target.value)}
+          placeholder="e.g. NW1 8NH"
+          autoComplete="postal-code"
+          autoCapitalize="characters"
+          spellCheck={false}
+          aria-label="Property postcode"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            background: "transparent",
+            border: "none",
+            borderBottom: `1px solid ${LINE}`,
+            padding: "12px 2px",
+            fontFamily: "var(--font-outfit)",
+            fontWeight: 300,
+            fontSize: 16,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: FG,
+            outline: "none",
+          }}
+        />
+        <button
+          type="submit"
+          disabled={loading || (!resolved && !postcode.trim())}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            fontFamily: "var(--font-outfit)",
+            fontWeight: 400,
+            fontSize: 11,
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            whiteSpace: "nowrap",
+            color: resolved ? "#f8f6f3" : FG,
+            background: resolved ? FG : "transparent",
+            border: `1px solid ${resolved ? FG : "rgba(26,25,22,0.2)"}`,
+            padding: "0 20px",
+            cursor: loading ? "wait" : "pointer",
+            opacity: !resolved && !postcode.trim() ? 0.4 : 1,
+            transition: "all 0.35s ease",
+          }}
+        >
+          {loading ? "Checking…" : resolved ? "Begin" : "Check"}
+          {!loading && <Arrow />}
+        </button>
+      </div>
+
+      {/* resolved zone — shown before the user commits to it */}
+      {resolved && zone && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: 10,
+            flexWrap: "wrap",
+            marginTop: 16,
+            padding: "12px 14px",
+            border: "1px solid rgba(184,148,78,0.45)",
+            background: "rgba(184,148,78,0.07)",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-bodoni)",
+              fontWeight: 600,
+              fontSize: 15,
+              color: ACCENT,
+            }}
+          >
+            {zone.label}
+          </span>
+          <span
+            style={{
+              fontFamily: "var(--font-outfit)",
+              fontWeight: 400,
+              fontSize: 12.5,
+              color: FG,
+            }}
+          >
+            {zone.sub}
+          </span>
+          {resolved.borough && (
+            <span
+              style={{
+                fontFamily: "var(--font-outfit)",
+                fontWeight: 300,
+                fontSize: 11.5,
+                letterSpacing: "0.06em",
+                color: MUTED,
+                marginLeft: "auto",
+              }}
+            >
+              {resolved.borough}
+            </span>
+          )}
+        </div>
+      )}
+
+      {status === "notfound" && (
+        <p style={{ ...footnote, color: "#b06a4c" }}>
+          We couldn&apos;t find that postcode. Check it and try again, or
+          continue at Greater London rates.
+        </p>
+      )}
+      {status === "error" && (
+        <p style={{ ...footnote, color: "#b06a4c" }}>
+          The postcode lookup is unavailable right now. You can continue at
+          Greater London rates and we&apos;ll confirm your zone on the quote.
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={onSkip}
+        style={{
+          ...footnote,
+          display: "block",
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          textAlign: "left",
+          cursor: "pointer",
+          textDecoration: "underline",
+          textUnderlineOffset: 4,
+        }}
+      >
+        Skip — price at Greater London rates
+      </button>
+    </form>
   );
 }

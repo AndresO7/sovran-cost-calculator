@@ -2,18 +2,23 @@
 
 import { FormEvent, useState } from "react";
 import {
+  areaExceedsModel,
+  EXT_FRAMES,
+  EXT_RATES,
   EXT_ROOFS,
-  FRAMES,
   GLAZING,
   HOUSE,
   LOFT_FINISHES,
+  LOFT_FRAMES,
+  LOFT_LAYOUTS,
   LOFT_TYPES,
   MATERIALS,
   PATIOS,
-  SIZES,
+  TIERS,
 } from "../config";
-import { formatRange, PriceRange } from "../pricing";
+import { formatRange, PriceBreakdown, PriceRange } from "../pricing";
 import { CalculatorAction, CalculatorState } from "../state";
+import { ZONES } from "../zones";
 import { ACCENT, FAINT, FG, LINE, MUTED, priceTag } from "./controls";
 
 const inputStyle: React.CSSProperties = {
@@ -30,13 +35,24 @@ const inputStyle: React.CSSProperties = {
   transition: "border-color 0.3s ease",
 };
 
+/** One priced line of the summary: label, chosen option, uplift. */
+type Row = [string, string, number | null];
+
+/** A project block — its own rows and its own range. */
+interface Group {
+  title: string;
+  basis: string;
+  rows: Row[];
+  range: PriceRange;
+}
+
 export function QuoteModal({
   state,
   price,
   dispatch,
 }: {
   state: CalculatorState;
-  price: PriceRange;
+  price: PriceBreakdown;
   dispatch: React.Dispatch<CalculatorAction>;
 }) {
   const [sent, setSent] = useState(false);
@@ -44,19 +60,54 @@ export function QuoteModal({
 
   const close = () => dispatch({ type: "SET_QUOTE_OPEN", open: false });
 
-  const size = SIZES[state.ground.size];
+  const { ground, loft } = state;
+  const zone = ZONES[price.zone];
+  const groups: Group[] = [];
 
-  const rows: Array<[string, string, number | null]> = [
-    ["Property", `${HOUSE.label} · ${HOUSE.sub}`, null],
-    ["Extension", `${size.description} (${size.area} m²)`, null],
-    ["Finish", MATERIALS[state.ground.material].label, MATERIALS[state.ground.material].price],
-    ["Roof", EXT_ROOFS[state.ground.roof].label, EXT_ROOFS[state.ground.roof].price],
-    ["Doors", GLAZING[state.ground.glazing].label, GLAZING[state.ground.glazing].price],
-    ["Joinery", FRAMES[state.ground.frame].label, FRAMES[state.ground.frame].price],
-    ["Patio", PATIOS[state.ground.patio].label, PATIOS[state.ground.patio].price],
-    ["Loft", LOFT_TYPES[state.loft.type].label, LOFT_TYPES[state.loft.type].price],
-    ["Re-roof", LOFT_FINISHES[state.loft.finish].label, LOFT_FINISHES[state.loft.finish].price],
-  ];
+  if (price.extension) {
+    const area = ground.area;
+    const rate = EXT_RATES[ground.tier][price.zone];
+    groups.push({
+      title: "Rear extension",
+      basis: `${area} m² × £${rate.low.toLocaleString(
+        "en-GB"
+      )}–${rate.high.toLocaleString("en-GB")} / m²`,
+      range: price.extension,
+      rows: [
+        [
+          "Size",
+          areaExceedsModel(area)
+            ? `${area} m² floor area`
+            : `Full width × ${ground.depth.toFixed(2).replace(/\.?0+$/, "")} m deep (${area} m²)`,
+          null,
+        ],
+        ["Spec", TIERS[ground.tier].label, null],
+        ["Finish", MATERIALS[ground.material].label, MATERIALS[ground.material].price],
+        ["Roof", EXT_ROOFS[ground.roof].label, EXT_ROOFS[ground.roof].price],
+        ["Doors", GLAZING[ground.glazing].label, GLAZING[ground.glazing].price],
+        ["Frames", EXT_FRAMES[ground.frame].label, EXT_FRAMES[ground.frame].price],
+        ["Patio", PATIOS[ground.patio].label, PATIOS[ground.patio].price],
+      ],
+    });
+  }
+
+  if (price.loft) {
+    groups.push({
+      title: "Loft conversion",
+      basis: `${loft.depth.toFixed(1)} m depth · ±15% range`,
+      range: price.loft,
+      rows: [
+        ["Dormer", LOFT_TYPES[loft.type].label, null],
+        [
+          "Layout",
+          `${LOFT_LAYOUTS[loft.layout].note} — ${LOFT_LAYOUTS[loft.layout].label}`,
+          LOFT_LAYOUTS[loft.layout].price,
+        ],
+        ["Frames", LOFT_FRAMES[loft.frame].label, LOFT_FRAMES[loft.frame].price],
+        ["Re-roof", LOFT_FINISHES[loft.finish].label, LOFT_FINISHES[loft.finish].price],
+      ],
+    });
+  }
 
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -189,63 +240,116 @@ export function QuoteModal({
             </h2>
 
             {/* summary */}
-            <div style={{ borderTop: `1px solid ${LINE}`, marginBottom: 26 }}>
-              {rows.map(([label, value, p]) => (
-                <div
-                  key={label}
-                  style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    gap: 14,
-                    padding: "9px 0",
-                    borderBottom: `1px solid ${LINE}`,
-                  }}
-                >
-                  <span
+            <div style={{ marginBottom: 26 }}>
+              {/* property + zone the rates come from */}
+              <div style={{ borderTop: `1px solid ${LINE}` }}>
+                <SummaryRow label="Property" value={`${HOUSE.label} · ${HOUSE.sub}`} />
+                <SummaryRow
+                  label="Zone"
+                  value={`${zone.label} — ${
+                    state.location.borough ?? zone.sub
+                  }${state.location.postcode ? ` · ${state.location.postcode}` : ""}`}
+                />
+              </div>
+
+              {groups.map((group) => (
+                <div key={group.title} style={{ marginTop: 22 }}>
+                  <div
                     style={{
-                      fontFamily: "var(--font-outfit)",
-                      fontWeight: 400,
-                      fontSize: 10,
-                      letterSpacing: "0.18em",
-                      textTransform: "uppercase",
-                      color: FAINT,
-                      width: 92,
-                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "baseline",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      paddingBottom: 8,
                     }}
                   >
-                    {label}
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: "var(--font-outfit)",
-                      fontWeight: 300,
-                      fontSize: 13.5,
-                      color: FG,
-                      flex: 1,
-                    }}
-                  >
-                    {value}
-                  </span>
-                  {p !== null && (
+                    <span
+                      style={{
+                        fontFamily: "var(--font-outfit)",
+                        fontWeight: 400,
+                        fontSize: 11,
+                        letterSpacing: "0.2em",
+                        textTransform: "uppercase",
+                        color: FG,
+                      }}
+                    >
+                      {group.title}
+                    </span>
                     <span
                       style={{
                         fontFamily: "var(--font-outfit)",
                         fontWeight: 300,
-                        fontSize: 12,
-                        color: p === 0 ? FAINT : ACCENT,
+                        fontSize: 11,
+                        color: FAINT,
+                        textAlign: "right",
                       }}
                     >
-                      {priceTag(p)}
+                      {group.basis}
                     </span>
-                  )}
+                  </div>
+                  <div style={{ borderTop: `1px solid ${LINE}` }}>
+                    {group.rows.map(([label, value, p]) => (
+                      <SummaryRow key={label} label={label} value={value} price={p} />
+                    ))}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "baseline",
+                      padding: "10px 0 0",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "var(--font-outfit)",
+                        fontWeight: 300,
+                        fontSize: 11,
+                        letterSpacing: "0.14em",
+                        textTransform: "uppercase",
+                        color: FAINT,
+                      }}
+                    >
+                      Subtotal
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: "var(--font-bodoni)",
+                        fontWeight: 600,
+                        fontSize: 15,
+                        color: MUTED,
+                      }}
+                    >
+                      {formatRange(group.range)}
+                    </span>
+                  </div>
                 </div>
               ))}
+
+              {groups.length === 0 && (
+                <p
+                  style={{
+                    fontFamily: "var(--font-outfit)",
+                    fontWeight: 300,
+                    fontSize: 13,
+                    lineHeight: 1.7,
+                    color: MUTED,
+                    padding: "18px 0",
+                  }}
+                >
+                  Nothing is selected yet — switch on a rear extension or choose
+                  a loft conversion to see an estimate.
+                </p>
+              )}
+
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "baseline",
-                  padding: "14px 0 4px",
+                  marginTop: 22,
+                  paddingTop: 14,
+                  borderTop: `1px solid rgba(26,25,22,0.25)`,
                 }}
               >
                 <span
@@ -266,10 +370,10 @@ export function QuoteModal({
                     fontWeight: 600,
                     fontSize: "clamp(21px, 2.3vw, 28px)",
                     letterSpacing: "0.02em",
-                    color: FG,
+                    color: groups.length ? FG : MUTED,
                   }}
                 >
-                  {formatRange(price)}
+                  {groups.length ? formatRange(price.total) : "—"}
                 </span>
               </div>
             </div>
@@ -289,6 +393,7 @@ export function QuoteModal({
                   name="postcode"
                   placeholder="Property postcode"
                   autoComplete="postal-code"
+                  defaultValue={state.location.postcode}
                   style={inputStyle}
                 />
               </div>
@@ -316,6 +421,68 @@ export function QuoteModal({
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/** One hairline-ruled line of the summary. */
+function SummaryRow({
+  label,
+  value,
+  price,
+}: {
+  label: string;
+  value: string;
+  price?: number | null;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "baseline",
+        gap: 14,
+        padding: "9px 0",
+        borderBottom: `1px solid ${LINE}`,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: "var(--font-outfit)",
+          fontWeight: 400,
+          fontSize: 10,
+          letterSpacing: "0.18em",
+          textTransform: "uppercase",
+          color: FAINT,
+          width: 72,
+          flexShrink: 0,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontFamily: "var(--font-outfit)",
+          fontWeight: 300,
+          fontSize: 13.5,
+          color: FG,
+          flex: 1,
+        }}
+      >
+        {value}
+      </span>
+      {price !== null && price !== undefined && (
+        <span
+          style={{
+            fontFamily: "var(--font-outfit)",
+            fontWeight: 300,
+            fontSize: 12,
+            whiteSpace: "nowrap",
+            color: price === 0 ? FAINT : ACCENT,
+          }}
+        >
+          {priceTag(price)}
+        </span>
+      )}
     </div>
   );
 }

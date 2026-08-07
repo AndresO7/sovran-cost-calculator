@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
-import { LoftFinishId, LoftTypeId } from "../config";
+import { FrameId, LOFT_FRAMES, LoftFinishId, LoftTypeId } from "../config";
 import {
   flatMaterial,
   glassMaterial,
@@ -12,6 +12,8 @@ import { CBox, Chimney, TexBox, usePopIn, WallWithOpenings } from "./parts";
 interface LoftProps {
   type: LoftTypeId;
   finish: LoftFinishId;
+  /** joinery colour for the dormer windows */
+  frame: FrameId;
   /** eaves width of the host roof (incl. overhang) */
   roofW: number;
   /** half-depth of the roof footprint (eave to ridge, horizontal) */
@@ -40,7 +42,8 @@ export function Loft(props: LoftProps) {
 function BoxDormer(props: LoftProps) {
   const ref = useRef<THREE.Group>(null);
   usePopIn(ref, 0.05);
-  const { roofW, slopeHalfD, eaveY, rise, rearEaveZ, finish } = props;
+  const { roofW, slopeHalfD, eaveY, rise, rearEaveZ, finish, frame } = props;
+  const frameColor = LOFT_FRAMES[frame].color;
   const w = roofW - 1.7; // set back from both gables
   const frontZ = rearEaveZ - 0.4;
   const ridgeZ = rearEaveZ - slopeHalfD;
@@ -58,10 +61,13 @@ function BoxDormer(props: LoftProps) {
   const deckD = frontZ + 0.08 - (ridgeZ + 0.06);
   const deckZ = (frontZ + 0.08 + ridgeZ + 0.06) / 2;
   const winW = 1.5;
-  const winH = 1.5;
+  // A shallower house gives a lower roof and so a shorter dormer face. The
+  // glazing has to follow it — punching a 1.5 m opening into a 1.4 m wall
+  // leaves WallWithOpenings with negative-height pieces.
+  const winH = Math.min(1.5, h - 0.45);
   const openings = useMemo(
     () => [-1, 1].map((s) => ({ x: s * w * 0.22, y: h / 2, w: winW, h: winH })),
-    [w, h]
+    [w, h, winH]
   );
   const interiorColor = "#b8b0a1";
 
@@ -117,6 +123,7 @@ function BoxDormer(props: LoftProps) {
           key={s}
           w={winW}
           h={winH}
+          frameColor={frameColor}
           position={[s * w * 0.22, baseY + h / 2, frontZ]}
         />
       ))}
@@ -133,11 +140,14 @@ function BoxDormer(props: LoftProps) {
 function RecessedGlazing({
   w,
   h,
+  frameColor,
   position,
   depth = 0.1,
 }: {
   w: number;
   h: number;
+  /** joinery colour of the mullion */
+  frameColor: string;
   position: [number, number, number];
   /** how far the panes sit behind the cladding face */
   depth?: number;
@@ -151,7 +161,7 @@ function RecessedGlazing({
       {/* slim central mullion splits the unit into a pair */}
       <mesh
         position={[0, 0, -depth + 0.012]}
-        material={flatMaterial("#23272b", 0.8)}
+        material={flatMaterial(frameColor, 0.8)}
         castShadow={false}
       >
         <boxGeometry args={[0.05, h, 0.022]} />
@@ -195,7 +205,8 @@ function DeckFrame({ w, d, y, z }: { w: number; d: number; y: number; z: number 
 function MansardDormer(props: LoftProps) {
   const ref = useRef<THREE.Group>(null);
   usePopIn(ref, 0.05);
-  const { roofW, slopeHalfD, eaveY, rise, rearEaveZ, finish } = props;
+  const { roofW, slopeHalfD, eaveY, rise, rearEaveZ, finish, frame } = props;
+  const frameColor = LOFT_FRAMES[frame].color;
   const alpha = 0.3; // lean from vertical, radians (~17°)
   const w = roofW - 0.6;
   // face rises to just under the crown, which sits level with the main ridge
@@ -248,7 +259,10 @@ function MansardDormer(props: LoftProps) {
   const mansardInterior = flatMaterial("#b8b0a1", 0.95);
 
   const winW = 1.1;
-  const winH = 1.5;
+  // Same constraint as the box dormer: the slated face shortens with the roof,
+  // and the opening sits 0.12 above its centre, so it runs out of face at the
+  // head first. Leaving 0.22 of slate top and bottom keeps the reveal intact.
+  const winH = Math.min(1.5, faceLen - 0.44);
   const openings = useMemo(
     () =>
       [-1, 1].map((s) => ({
@@ -257,7 +271,7 @@ function MansardDormer(props: LoftProps) {
         w: winW,
         h: winH,
       })),
-    [w, faceLen]
+    [w, faceLen, winH]
   );
 
   return (
@@ -276,7 +290,13 @@ function MansardDormer(props: LoftProps) {
           position={[0, -faceLen / 2, -0.07]}
         />
         {([-1, 1] as const).map((s) => (
-          <MansardWindow key={s} w={winW} h={winH} position={[s * w * 0.22, 0.12, 0]} />
+          <MansardWindow
+            key={s}
+            w={winW}
+            h={winH}
+            frameColor={frameColor}
+            position={[s * w * 0.22, 0.12, 0]}
+          />
         ))}
         {/* Interior wall behind the slated face, seen through the glazing */}
         <mesh position={[0, 0, -0.095]} material={mansardInterior}>
@@ -308,17 +328,20 @@ function MansardDormer(props: LoftProps) {
 function MansardWindow({
   w,
   h,
+  frameColor,
   position,
   recess = 0.1,
 }: {
   w: number;
   h: number;
+  /** joinery colour of the sash and mullion */
+  frameColor: string;
   position: [number, number, number];
   /** how far the sash sits behind the slate face */
   recess?: number;
 }) {
   const lining = flatMaterial("#23272b", 0.85);
-  const sash = flatMaterial("#2e3338", 0.7);
+  const sash = flatMaterial(frameColor, 0.7);
   const lt = 0.025; // lining board thickness
   const ld = 0.14; // lining depth — sleeves the full reveal
   const lz = 0.07 - ld / 2;

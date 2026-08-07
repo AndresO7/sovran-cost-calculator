@@ -3,7 +3,7 @@
 import { Component, ReactNode, useEffect, useMemo, useReducer, useRef } from "react";
 import dynamic from "next/dynamic";
 import gsap from "gsap";
-import { HOUSE, SIZES } from "./config";
+import { areaExceedsModel, EXT_DEPTH, HOUSE, LOFT_TYPES } from "./config";
 import { calculatePrice } from "./pricing";
 import { CalculatorState, initialState, reducer } from "./state";
 import { ConfigPanel } from "./ui/ConfigPanel";
@@ -40,7 +40,7 @@ export default function Calculator() {
       <SiteNav />
       {state.started ? (
         <>
-          <TopBar price={price} dispatch={dispatch} />
+          <TopBar price={price} location={state.location} dispatch={dispatch} />
           <div className="calc-body">
             <div
               className="calc-viewport"
@@ -51,7 +51,7 @@ export default function Calculator() {
               </SceneBoundary>
               <ViewportDressing state={state} />
             </div>
-            <ConfigPanel state={state} dispatch={dispatch} />
+            <ConfigPanel state={state} price={price} dispatch={dispatch} />
           </div>
         </>
       ) : (
@@ -68,7 +68,15 @@ const INK_FAINT = "rgba(52, 46, 38, 0.42)";
 const BRONZE = "#8a6b3a";
 
 function ViewportDressing({ state }: { state: CalculatorState }) {
-  const size = SIZES[state.ground.size];
+  const { enabled, depth, area } = state.ground;
+  // the drawing title reads out whichever project the model is showing
+  const spec = enabled
+    ? areaExceedsModel(area)
+      ? `${area} m² — drawn at ${EXT_DEPTH.max} m`
+      : `${HOUSE.w.toFixed(1)} × ${depth.toFixed(1)} m — ${area} m²`
+    : state.loft.type !== "none"
+      ? `${LOFT_TYPES[state.loft.type].label} — ${state.loft.depth.toFixed(1)} m deep`
+      : "No works selected";
   const inset = "clamp(14px, 1.8vw, 26px)";
   const tick = (pos: React.CSSProperties) => (
     <span
@@ -111,7 +119,7 @@ function ViewportDressing({ state }: { state: CalculatorState }) {
             letterSpacing: "0.06em",
           }}
         >
-          {size.w.toFixed(1)} × {size.d.toFixed(1)} m — {size.area} m²
+          {spec}
         </div>
       </div>
 

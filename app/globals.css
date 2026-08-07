@@ -47,6 +47,75 @@ input:focus {
   background: rgba(184, 148, 78, 0.25);
 }
 
+/* --------------------------------- range slider -------------------------------- */
+/* Hairline track that fills to the thumb in accent — --calc-slider-pct is set
+   inline by the Slider control so the fill follows the value. */
+
+.calc-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+  /* fallback for engines that ignore the pseudo-elements below — keeps the
+     control in brand gold rather than the browser's default blue */
+  accent-color: var(--accent);
+}
+
+.calc-slider::-webkit-slider-runnable-track {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0 var(--calc-slider-pct),
+    rgba(26, 25, 22, 0.18) var(--calc-slider-pct) 100%
+  );
+}
+
+.calc-slider::-moz-range-track {
+  height: 1px;
+  background: rgba(26, 25, 22, 0.18);
+}
+
+.calc-slider::-moz-range-progress {
+  height: 1px;
+  background: var(--accent);
+}
+
+.calc-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  margin-top: -7px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  background: var(--background);
+  transition: box-shadow 0.25s ease;
+}
+
+.calc-slider::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  background: var(--background);
+  transition: box-shadow 0.25s ease;
+}
+
+.calc-slider:hover::-webkit-slider-thumb,
+.calc-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(184, 148, 78, 0.18);
+}
+
+.calc-slider:hover::-moz-range-thumb,
+.calc-slider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px rgba(184, 148, 78, 0.18);
+}
+
+.calc-slider:focus {
+  outline: none;
+}
+
 /* ------------------------------ calculator layout ------------------------------ */
 
 .calc-root {

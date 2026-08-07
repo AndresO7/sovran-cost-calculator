@@ -3,12 +3,13 @@ import { useFrame } from "@react-three/fiber";
 import { easing } from "maath";
 import * as THREE from "three";
 import {
+  EXT_FRAMES,
   ExtRoofId,
-  FRAMES,
   FrameId,
   GlazingId,
   LoftFinishId,
   MaterialId,
+  TierId,
 } from "../config";
 import { flatMaterial, glassMaterial, lightWashMaterial } from "./materials";
 import { CBox, LeanTo, TexBox } from "./parts";
@@ -20,6 +21,7 @@ const PITCH_RISE = 0.45;
 interface ExtensionProps {
   width: number;
   depth: number;
+  tier: TierId;
   material: MaterialId;
   roof: ExtRoofId;
   glazing: GlazingId;
@@ -37,13 +39,15 @@ interface ExtensionProps {
 export function Extension({
   width,
   depth,
+  tier,
   material,
   roof,
   glazing,
   frame,
   roofFinish,
 }: ExtensionProps) {
-  const frameColor = FRAMES[frame].color;
+  const frameColor = EXT_FRAMES[frame].color;
+  const highEnd = tier === "highEnd";
   const group = useRef<THREE.Group>(null);
   const prev = useRef({ width, depth });
 
@@ -274,6 +278,273 @@ export function Extension({
           </group>
         );
       })}
+
+      {highEnd && (
+        <PremiumDetails
+          width={width}
+          depth={depth}
+          wallH={wallH}
+          wallT={wallT}
+          wt={wt}
+          openW={openW}
+          openH={openH}
+          flatTop={flatTop}
+        />
+      )}
+    </group>
+  );
+}
+
+/** Pale stone — how jambs, cornices and plinths are dressed in London. */
+const STONE = "#e4ddcd";
+/** Off-white joinery, read against the warm grey interior. */
+const JOINERY = "#efeae0";
+
+/**
+ * What a high-end specification actually buys: relief. The standard shell has
+ * no moulding anywhere — every surface is flat — so the premium tier dresses
+ * it in joinery rather than changing it. A moulded surround frames the doors,
+ * a stepped cornice and plinth band the walls, pilasters turn the garden
+ * corners, and inside there is a coffered ceiling, skirting and paneling.
+ *
+ * Strictly additive: same height, same opening, same doors. Switching tier
+ * reads as a change of finish, never of build.
+ *
+ * Profiles are stepped and flat rather than classical ogees — the shell is
+ * contemporary, and bolection mouldings would fight it.
+ */
+function PremiumDetails({
+  width,
+  depth,
+  wallH,
+  wallT,
+  wt,
+  openW,
+  openH,
+  flatTop,
+}: {
+  width: number;
+  depth: number;
+  wallH: number;
+  wallT: number;
+  /** wall thickness of the hollow construction */
+  wt: number;
+  openW: number;
+  openH: number;
+  flatTop: boolean;
+}) {
+  const stone = { color: STONE, roughness: 0.72 };
+  const joinery = { color: JOINERY, roughness: 0.78 };
+
+  // interior envelope, matching the floor/ceiling slabs
+  const innerW = width - wt * 2;
+  const innerD = depth - wallT - wt;
+  const innerZ = (depth - wallT + wt) / 2;
+
+  // piers flanking the opening cap how wide the door surround can run
+  const pierW = (width - openW) / 2;
+  const archOuter = Math.min(0.13, pierW * 0.55);
+  const archInner = archOuter * 0.5;
+
+  // cornice and plinth set the span the pilasters run between
+  const plinthTop = 0.185;
+  const corniceBottom = wallH - 0.215;
+
+  /** One band of a stepped cornice: a ring projecting off all four faces. */
+  const corniceBand = (cy: number, h: number, p: number, key: string) => (
+    <group key={key}>
+      <CBox size={[width + p * 2, h, p]} position={[0, cy, depth + p / 2]} {...stone} />
+      <CBox size={[width + p * 2, h, p]} position={[0, cy, -p / 2]} {...stone} />
+      {([-1, 1] as const).map((s) => (
+        <CBox
+          key={s}
+          size={[p, h, depth]}
+          position={[s * (width / 2 + p / 2), cy, depth / 2]}
+          {...stone}
+        />
+      ))}
+    </group>
+  );
+
+  /**
+   * One band of the plinth. Runs the sides and back unbroken, but on the
+   * garden face only across the piers — a plinth never crosses a threshold.
+   */
+  const plinthBand = (cy: number, h: number, p: number, key: string) => (
+    <group key={key}>
+      <CBox size={[width + p * 2, h, p]} position={[0, cy, -p / 2]} {...stone} />
+      {([-1, 1] as const).map((s) => (
+        <CBox
+          key={`side${s}`}
+          size={[p, h, depth]}
+          position={[s * (width / 2 + p / 2), cy, depth / 2]}
+          {...stone}
+        />
+      ))}
+      {([-1, 1] as const).map((s) => (
+        <CBox
+          key={`pier${s}`}
+          size={[pierW + p, h, p]}
+          position={[s * ((width + openW) / 4 + p / 2), cy, depth + p / 2]}
+          {...stone}
+        />
+      ))}
+    </group>
+  );
+
+  /** One step of the door surround: two jambs and a head on the wall face. */
+  const architraveBand = (t: number, p: number, key: string) => (
+    <group key={key}>
+      {([-1, 1] as const).map((s) => (
+        <CBox
+          key={s}
+          size={[t, openH, p]}
+          position={[s * (openW / 2 + t / 2), openH / 2, depth + p / 2]}
+          {...stone}
+        />
+      ))}
+      <CBox
+        size={[openW + t * 2, t, p]}
+        position={[0, openH + t / 2, depth + p / 2]}
+        {...stone}
+      />
+    </group>
+  );
+
+  // coffered ceiling — beams dropped below the ceiling slab
+  const beamH = 0.07;
+  const beamW = 0.1;
+  const beamY = wallH - 0.02 - beamH / 2;
+  const bayZ = [innerD / 3, (innerD * 2) / 3].map((d) => wt + d);
+
+  // back-wall paneling
+  const panelMargin = 0.35;
+  const panelGap = 0.18;
+  const panelW = (innerW - panelMargin * 2 - panelGap * 2) / 3;
+  const panelH = 1.6;
+  const panelCY = 1.12;
+  const moulding = 0.04;
+  const panelZ = wt + 0.03;
+
+  return (
+    <group>
+      {/* 1 — moulded surround framing the garden doors */}
+      {architraveBand(archOuter, 0.028, "arch-outer")}
+      {architraveBand(archInner, 0.052, "arch-inner")}
+
+      {/* 2 — stepped cornice banding the head of the walls. The pitched roof
+             lands in this zone, so it only suits the flat-roofed variants. */}
+      {flatTop && (
+        <>
+          {corniceBand(wallH - 0.185, 0.06, 0.022, "cornice-bed")}
+          {corniceBand(wallH - 0.118, 0.068, 0.05, "cornice-corona")}
+        </>
+      )}
+
+      {/* 3 — plinth grounding the walls */}
+      {plinthBand(0.075, 0.15, 0.04, "plinth-main")}
+      {plinthBand(0.1675, 0.035, 0.022, "plinth-fillet")}
+
+      {/* 4 — pilasters turning the two garden corners, plinth to cornice */}
+      {([-1, 1] as const).map((s) => {
+        const pw = 0.2;
+        const proj = 0.035;
+        const hgt = corniceBottom - plinthTop;
+        return (
+          <CBox
+            key={`pilaster${s}`}
+            size={[pw, hgt, pw]}
+            position={[
+              s * (width / 2 + proj - pw / 2),
+              plinthTop + hgt / 2,
+              depth + proj - pw / 2,
+            ]}
+            {...stone}
+          />
+        );
+      })}
+
+      {/* 5 — coffered ceiling, seen through the glazing */}
+      <group>
+        {([-1, 1] as const).map((s) => (
+          <CBox
+            key={`cf-side${s}`}
+            size={[beamW, beamH, innerD]}
+            position={[s * (width / 2 - wt - beamW / 2), beamY, innerZ]}
+            {...joinery}
+            castShadow={false}
+          />
+        ))}
+        <CBox
+          size={[innerW, beamH, beamW]}
+          position={[0, beamY, wt + beamW / 2]}
+          {...joinery}
+          castShadow={false}
+        />
+        <CBox
+          size={[innerW, beamH, beamW]}
+          position={[0, beamY, depth - wallT - beamW / 2]}
+          {...joinery}
+          castShadow={false}
+        />
+        {bayZ.map((z) => (
+          <CBox
+            key={`cf-bay${z}`}
+            size={[innerW, beamH, beamW]}
+            position={[0, beamY, z]}
+            {...joinery}
+            castShadow={false}
+          />
+        ))}
+        <CBox
+          size={[beamW, beamH, innerD]}
+          position={[0, beamY, innerZ]}
+          {...joinery}
+          castShadow={false}
+        />
+      </group>
+
+      {/* 6 — skirting round the room, and framed panels on the back wall */}
+      {([-1, 1] as const).map((s) => (
+        <CBox
+          key={`skirt${s}`}
+          size={[0.025, 0.13, innerD]}
+          position={[s * (width / 2 - wt - 0.0125), 0.085, innerZ]}
+          {...joinery}
+          castShadow={false}
+        />
+      ))}
+      <CBox
+        size={[innerW - 0.05, 0.13, 0.025]}
+        position={[0, 0.085, wt + 0.0325]}
+        {...joinery}
+        castShadow={false}
+      />
+      {[-1, 0, 1].map((i) => {
+        const cx = i * (panelW + panelGap);
+        return (
+          <group key={`panel${i}`}>
+            {([-1, 1] as const).map((s) => (
+              <CBox
+                key={`v${s}`}
+                size={[moulding, panelH, 0.02]}
+                position={[cx + (s * panelW) / 2, panelCY, panelZ]}
+                {...joinery}
+                castShadow={false}
+              />
+            ))}
+            {([-1, 1] as const).map((s) => (
+              <CBox
+                key={`h${s}`}
+                size={[panelW, moulding, 0.02]}
+                position={[cx, panelCY + (s * panelH) / 2, panelZ]}
+                {...joinery}
+                castShadow={false}
+              />
+            ))}
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -299,13 +570,13 @@ function GlazedUnit({
   const frameMat = flatMaterial(frameColor, 0.6);
   const yMid = h / 2 + 0.02;
   const outerT = 0.11;
+  const paneT = 0.056;
 
-  // pane x-ranges from the segment ratios
-  let acc = -unitW / 2;
-  const panes = segments.map((s) => {
-    const x0 = acc;
-    acc += s * unitW;
-    return [x0, acc] as const;
+  // pane x-ranges from the segment ratios, each offset by the ones before it
+  const panes = segments.map((s, i) => {
+    const x0 =
+      -unitW / 2 + segments.slice(0, i).reduce((a, b) => a + b, 0) * unitW;
+    return [x0, x0 + s * unitW] as const;
   });
 
   return (
@@ -341,21 +612,21 @@ function GlazedUnit({
             {([-1, 1] as const).map((s) => (
               <mesh
                 key={`v${s}`}
-                position={[s * (pw / 2 - 0.028), 0, 0.045]}
+                position={[s * (pw / 2 - paneT / 2), 0, 0.045]}
                 material={frameMat}
                 castShadow={false}
               >
-                <boxGeometry args={[0.056, h, 0.05]} />
+                <boxGeometry args={[paneT, h, 0.05]} />
               </mesh>
             ))}
             {([-1, 1] as const).map((s) => (
               <mesh
                 key={`h${s}`}
-                position={[0, s * (h / 2 - 0.028), 0.045]}
+                position={[0, s * (h / 2 - paneT / 2), 0.045]}
                 material={frameMat}
                 castShadow={false}
               >
-                <boxGeometry args={[pw, 0.056, 0.05]} />
+                <boxGeometry args={[pw, paneT, 0.05]} />
               </mesh>
             ))}
           </group>

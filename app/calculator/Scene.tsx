@@ -71,7 +71,9 @@ export default function Scene({ state }: { state: CalculatorState }) {
       <House state={state} />
 
       <OrbitControls
-        target={[0, 2.4, -1]}
+        // keep the house framed as its depth changes — at the default 7.4 m
+        // this is the original [0, 2.4, -1]
+        target={[0, 2.4, -state.loft.depth / 2 + 2.7]}
         autoRotate={!interacted}
         autoRotateSpeed={0.45}
         enableDamping

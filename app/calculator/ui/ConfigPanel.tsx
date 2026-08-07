@@ -1,23 +1,35 @@
 "use client";
 
 import {
+  areaExceedsModel,
+  DormerId,
+  EXT_AREA,
+  EXT_DEPTH,
+  EXT_FRAMES,
+  EXT_RATES,
   EXT_ROOFS,
   ExtRoofId,
-  FRAMES,
   FrameId,
   GLAZING,
   GlazingId,
+  HOUSE,
+  LOFT_DEPTH,
   LOFT_FINISHES,
+  LOFT_FRAMES,
+  LOFT_LAYOUTS,
+  LOFT_RATES,
   LOFT_TYPES,
   LoftFinishId,
+  LoftLayoutId,
   LoftTypeId,
   MATERIALS,
   MaterialId,
   PATIOS,
   PatioId,
-  SIZES,
-  SizeId,
+  TIERS,
+  TierId,
 } from "../config";
+import { formatExactRange, PriceBreakdown, PriceRange } from "../pricing";
 import { CalculatorAction, CalculatorState, TabId } from "../state";
 import {
   ACCENT,
@@ -26,10 +38,13 @@ import {
   Icons,
   LINE,
   MUTED,
+  NumberField,
   OptionGrid,
   Section,
-  SizePicker,
+  Slider,
   SwatchRow,
+  TierPicker,
+  Toggle,
 } from "./controls";
 
 const LOFT_ICONS: Record<LoftTypeId, React.ReactNode> = {
@@ -38,14 +53,81 @@ const LOFT_ICONS: Record<LoftTypeId, React.ReactNode> = {
   mansardDormer: Icons.mansardDormer,
 };
 
+const LAYOUT_ICONS: Record<LoftLayoutId, React.ReactNode> = {
+  a: Icons.layoutA,
+  b: Icons.layoutB,
+  c: Icons.layoutC,
+  d: Icons.layoutD,
+};
+
+const note: React.CSSProperties = {
+  fontFamily: "var(--font-outfit)",
+  fontWeight: 300,
+  fontSize: 11,
+  lineHeight: 1.7,
+  color: FAINT,
+  marginTop: 12,
+};
+
+/**
+ * Live subtotal for one project, sat right under the control that drives it —
+ * without it the sliders feel inert, because the only figure that responds is
+ * up in the top bar.
+ */
+function Subtotal({ label, range }: { label: string; range: PriceRange }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "baseline",
+        justifyContent: "space-between",
+        gap: 12,
+        marginTop: 14,
+        paddingTop: 12,
+        borderTop: `1px solid ${LINE}`,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: "var(--font-outfit)",
+          fontWeight: 300,
+          fontSize: 10,
+          letterSpacing: "0.18em",
+          textTransform: "uppercase",
+          color: FAINT,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontFamily: "var(--font-bodoni)",
+          fontWeight: 600,
+          fontSize: 14,
+          color: ACCENT,
+          fontVariantNumeric: "tabular-nums",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {formatExactRange(range)}
+      </span>
+    </div>
+  );
+}
+
 export function ConfigPanel({
   state,
+  price,
   dispatch,
 }: {
   state: CalculatorState;
+  price: PriceBreakdown;
   dispatch: React.Dispatch<CalculatorAction>;
 }) {
   const tab = state.activeTab;
+  const zone = state.location.zone;
+  const { enabled } = state.ground;
+  const hasLoft = state.loft.type !== "none";
 
   return (
     <aside
@@ -118,84 +200,143 @@ export function ConfigPanel({
       >
         {tab === "ground" ? (
           <>
-            <Section index="01" label="Extension size">
-              <SizePicker
-                options={(Object.keys(SIZES) as SizeId[]).map((id) => ({
-                  id,
-                  label: SIZES[id].label,
-                  description: SIZES[id].description,
-                  area: SIZES[id].area,
-                }))}
-                value={state.ground.size}
-                onChange={(id) => dispatch({ type: "SET_SIZE", size: id as SizeId })}
-              />
-            </Section>
-
-            <Section index="02" label="External finish">
-              <SwatchRow
-                options={(Object.keys(MATERIALS) as MaterialId[]).map((id) => ({
-                  id,
-                  label: MATERIALS[id].label,
-                  price: MATERIALS[id].price,
-                }))}
-                value={state.ground.material}
-                onChange={(id) =>
-                  dispatch({ type: "SET_MATERIAL", material: id as MaterialId })
+            <Section index="01" label="Rear extension">
+              <Toggle
+                checked={enabled}
+                onChange={(v) => dispatch({ type: "SET_GROUND_ENABLED", enabled: v })}
+                label={enabled ? "Included in this project" : "Not included"}
+                hint={
+                  enabled
+                    ? "Full-width, reaching into the garden"
+                    : "Switch on to add a rear extension"
                 }
               />
             </Section>
 
-            <Section index="03" label="Extension roof">
-              <OptionGrid
-                options={(Object.keys(EXT_ROOFS) as ExtRoofId[]).map((id) => ({
-                  id,
-                  label: EXT_ROOFS[id].label,
-                  price: EXT_ROOFS[id].price,
-                  icon: Icons[id],
-                }))}
-                value={state.ground.roof}
-                onChange={(id) => dispatch({ type: "SET_EXT_ROOF", roof: id as ExtRoofId })}
-              />
-            </Section>
+            {enabled && (
+              <>
+                <Section index="02" label="Specification">
+                  <TierPicker
+                    options={(Object.keys(TIERS) as TierId[]).map((id) => ({
+                      id,
+                      label: TIERS[id].label,
+                      description: TIERS[id].description,
+                      rate: `£${EXT_RATES[id][zone].low.toLocaleString(
+                        "en-GB"
+                      )}–${EXT_RATES[id][zone].high.toLocaleString("en-GB")} / m²`,
+                    }))}
+                    value={state.ground.tier}
+                    onChange={(id) => dispatch({ type: "SET_TIER", tier: id as TierId })}
+                  />
+                  <p style={note}>
+                    {state.ground.tier === "highEnd"
+                      ? "Bronze reveals, a lit ceiling shadow gap, recessed uplighters and a flush drainage channel — shown on the model."
+                      : "High end adds bronze reveals, feature lighting and concealed drainage to the same structure."}
+                  </p>
+                </Section>
 
-            <Section index="04" label="Garden doors">
-              <OptionGrid
-                options={(Object.keys(GLAZING) as GlazingId[]).map((id) => ({
-                  id,
-                  label: GLAZING[id].label,
-                  price: GLAZING[id].price,
-                  icon: Icons[id],
-                }))}
-                value={state.ground.glazing}
-                onChange={(id) =>
-                  dispatch({ type: "SET_GLAZING", glazing: id as GlazingId })
-                }
-              />
-            </Section>
+                <Section index="03" label="Extension size">
+                  <Slider
+                    value={state.ground.depth}
+                    min={EXT_DEPTH.min}
+                    max={EXT_DEPTH.max}
+                    step={EXT_DEPTH.step}
+                    onChange={(depth) => dispatch({ type: "SET_DEPTH", depth })}
+                    label="Extension depth into the garden, metres"
+                    readout={`${state.ground.depth.toFixed(2).replace(/\.?0+$/, "")} m deep`}
+                    caption={`${HOUSE.w.toFixed(1)} m wide`}
+                  />
+                  <div style={{ marginTop: 16 }}>
+                    <NumberField
+                      value={state.ground.area}
+                      min={EXT_AREA.min}
+                      max={EXT_AREA.max}
+                      suffix="m²"
+                      label="Floor area"
+                      onCommit={(area) => dispatch({ type: "SET_AREA", area })}
+                    />
+                  </div>
+                  <p style={note}>
+                    {areaExceedsModel(state.ground.area)
+                      ? `Priced on ${state.ground.area} m². That is deeper than the model can draw, so the drawing stays at ${EXT_DEPTH.max} m — the estimate uses your figure.`
+                      : "The extension spans the full width of the house, so the depth sets the area. Enter the area directly if you already know it."}
+                  </p>
+                  {price.extension && (
+                    <Subtotal label="Extension" range={price.extension} />
+                  )}
+                </Section>
 
-            <Section index="05" label="Joinery colour">
-              <SwatchRow
-                options={(Object.keys(FRAMES) as FrameId[]).map((id) => ({
-                  id,
-                  label: FRAMES[id].label,
-                  price: FRAMES[id].price,
-                }))}
-                value={state.ground.frame}
-                onChange={(id) => dispatch({ type: "SET_FRAME", frame: id as FrameId })}
-              />
-            </Section>
+                <Section index="04" label="External finish">
+                  <SwatchRow
+                    options={(Object.keys(MATERIALS) as MaterialId[]).map((id) => ({
+                      id,
+                      label: MATERIALS[id].label,
+                      price: MATERIALS[id].price,
+                    }))}
+                    value={state.ground.material}
+                    onChange={(id) =>
+                      dispatch({ type: "SET_MATERIAL", material: id as MaterialId })
+                    }
+                  />
+                </Section>
 
-            <Section index="06" label="Patio finish">
-              <SwatchRow
-                options={(Object.keys(PATIOS) as PatioId[]).map((id) => ({
-                  id,
-                  label: PATIOS[id].label,
-                  price: PATIOS[id].price,
-                }))}
-                value={state.ground.patio}
-                onChange={(id) => dispatch({ type: "SET_PATIO", patio: id as PatioId })}
-              />
-            </Section>
+                <Section index="05" label="Extension roof">
+                  <OptionGrid
+                    columns={2}
+                    options={(Object.keys(EXT_ROOFS) as ExtRoofId[]).map((id) => ({
+                      id,
+                      label: EXT_ROOFS[id].label,
+                      price: EXT_ROOFS[id].price,
+                      icon: Icons[id],
+                    }))}
+                    value={state.ground.roof}
+                    onChange={(id) =>
+                      dispatch({ type: "SET_EXT_ROOF", roof: id as ExtRoofId })
+                    }
+                  />
+                </Section>
+
+                <Section index="06" label="Garden doors">
+                  <OptionGrid
+                    options={(Object.keys(GLAZING) as GlazingId[]).map((id) => ({
+                      id,
+                      label: GLAZING[id].label,
+                      price: GLAZING[id].price,
+                      icon: Icons[id],
+                    }))}
+                    value={state.ground.glazing}
+                    onChange={(id) =>
+                      dispatch({ type: "SET_GLAZING", glazing: id as GlazingId })
+                    }
+                  />
+                </Section>
+
+                <Section index="07" label="Window frame colour">
+                  <SwatchRow
+                    options={(Object.keys(EXT_FRAMES) as FrameId[]).map((id) => ({
+                      id,
+                      label: EXT_FRAMES[id].label,
+                      price: EXT_FRAMES[id].price,
+                    }))}
+                    value={state.ground.frame}
+                    onChange={(id) => dispatch({ type: "SET_FRAME", frame: id as FrameId })}
+                  />
+                </Section>
+
+                <Section index="08" label="Patio finish">
+                  <SwatchRow
+                    options={(Object.keys(PATIOS) as PatioId[]).map((id) => ({
+                      id,
+                      label: PATIOS[id].label,
+                      price: PATIOS[id].price,
+                    }))}
+                    value={state.ground.patio}
+                    onChange={(id) => dispatch({ type: "SET_PATIO", patio: id as PatioId })}
+                  />
+                  <p style={note}>Landscaping shown for context — quoted separately.</p>
+                </Section>
+              </>
+            )}
           </>
         ) : (
           <>
@@ -204,8 +345,13 @@ export function ConfigPanel({
                 options={(Object.keys(LOFT_TYPES) as LoftTypeId[]).map((id) => ({
                   id,
                   label: LOFT_TYPES[id].label,
-                  price: LOFT_TYPES[id].price,
                   icon: LOFT_ICONS[id],
+                  meta:
+                    id === "none"
+                      ? ""
+                      : `£${LOFT_RATES[id as DormerId][
+                          zone
+                        ].toLocaleString("en-GB")} / m`,
                 }))}
                 value={state.loft.type}
                 onChange={(id) =>
@@ -214,7 +360,60 @@ export function ConfigPanel({
               />
             </Section>
 
-            <Section index="02" label="Roof finish — full re-roof">
+            {hasLoft && (
+              <>
+                <Section index="02" label="House depth">
+                  <Slider
+                    value={state.loft.depth}
+                    min={LOFT_DEPTH.min}
+                    max={LOFT_DEPTH.max}
+                    step={LOFT_DEPTH.step}
+                    onChange={(depth) => dispatch({ type: "SET_LOFT_DEPTH", depth })}
+                    label="Depth of the house front to back, metres"
+                    readout={`${state.loft.depth.toFixed(1)} m`}
+                    caption="front to back"
+                  />
+                  <p style={note}>
+                    Loft conversions are priced per metre of house depth —
+                    measure from the front wall to the rear. The model resizes
+                    with it.
+                  </p>
+                  {price.loft && <Subtotal label="Loft" range={price.loft} />}
+                </Section>
+
+                <Section index="03" label="Interior layout">
+                  <OptionGrid
+                    columns={2}
+                    options={(Object.keys(LOFT_LAYOUTS) as LoftLayoutId[]).map((id) => ({
+                      id,
+                      label: `${LOFT_LAYOUTS[id].note} — ${LOFT_LAYOUTS[id].label}`,
+                      price: LOFT_LAYOUTS[id].price,
+                      icon: LAYOUT_ICONS[id],
+                    }))}
+                    value={state.loft.layout}
+                    onChange={(id) =>
+                      dispatch({ type: "SET_LOFT_LAYOUT", layout: id as LoftLayoutId })
+                    }
+                  />
+                </Section>
+
+                <Section index="04" label="Window frame colour">
+                  <SwatchRow
+                    options={(Object.keys(LOFT_FRAMES) as FrameId[]).map((id) => ({
+                      id,
+                      label: LOFT_FRAMES[id].label,
+                      price: LOFT_FRAMES[id].price,
+                    }))}
+                    value={state.loft.frame}
+                    onChange={(id) =>
+                      dispatch({ type: "SET_LOFT_FRAME", frame: id as FrameId })
+                    }
+                  />
+                </Section>
+              </>
+            )}
+
+            <Section index={hasLoft ? "05" : "02"} label="Roof finish — full re-roof">
               <SwatchRow
                 options={(Object.keys(LOFT_FINISHES) as LoftFinishId[]).map((id) => ({
                   id,
@@ -226,18 +425,9 @@ export function ConfigPanel({
                   dispatch({ type: "SET_LOFT_FINISH", finish: id as LoftFinishId })
                 }
               />
-              <p
-                style={{
-                  fontFamily: "var(--font-outfit)",
-                  fontWeight: 300,
-                  fontSize: 11,
-                  lineHeight: 1.7,
-                  color: FAINT,
-                  marginTop: 12,
-                }}
-              >
-                Applied across the entire roof — main slopes and dormer
-                cladding.
+              <p style={note}>
+                Applied across the entire roof — main slopes and dormer cladding.
+                Shown for context; roofing is quoted separately.
               </p>
             </Section>
           </>
@@ -254,8 +444,9 @@ export function ConfigPanel({
             paddingTop: 20,
           }}
         >
-          Construction estimate only, based on premium London build rates.
-          Design &amp; planning fees quoted separately.
+          {`Construction estimate only, based on ${
+            zone === "zone1" ? "prime inner London" : "Greater London"
+          } build rates. Design & planning fees quoted separately.`}
         </p>
       </div>
     </aside>

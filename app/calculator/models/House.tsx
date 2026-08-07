@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import * as THREE from "three";
-import { HOUSE, LoftFinishId, SIZES } from "../config";
+import { HOUSE, LoftFinishId } from "../config";
 import { CalculatorState } from "../state";
 import { Extension } from "./Extension";
 import { Garden } from "./Garden";
@@ -18,11 +18,15 @@ import {
 } from "./parts";
 
 const W = HOUSE.w;
-const D = HOUSE.d; // house z: -D → 0, garden grows +z
 const WALL_H = 5.6; // two storeys
-const ROOF_H = 2.5;
 const OVER = 0.18;
 const WALL_T = 0.22; // facade thickness → real window reveals
+/**
+ * Roof rise as a fraction of the depth. The ridge runs across the width, so
+ * the slopes span the depth — holding this ratio keeps the pitch constant as
+ * the house gets deeper, instead of flattening the roof out.
+ */
+const ROOF_PITCH = 2.5 / HOUSE.d;
 
 // structural openings, in world x (the front facade group is rotated 180°,
 // so a window at local x sits at world -x)
@@ -36,6 +40,13 @@ const REAR_OPENINGS: WallOpening[] = [
   { x: -1.55, y: 4.25, w: 1.01, h: 1.46 },
   { x: 1.55, y: 4.25, w: 1.01, h: 1.46 },
 ];
+// Ground-floor rear elevation — the original garden doors and kitchen window.
+// Only punched when no extension covers this wall, otherwise the extension's
+// own interior is what you see through the glazing.
+const REAR_GROUND_OPENINGS: WallOpening[] = [
+  { x: -1.45, y: 1.16, w: 1.62, h: 2.12 },
+  { x: 1.55, y: 1.6, w: 1.5, h: 1.45 },
+];
 
 // roof-edge trim reads as part of the roof, not white-painted timber
 const ROOF_TRIM: Record<LoftFinishId, string> = {
@@ -48,7 +59,13 @@ const ROOF_TRIM: Record<LoftFinishId, string> = {
 export function House({ state }: { state: CalculatorState }) {
   const ref = useRef<THREE.Group>(null);
   usePopIn(ref, 0.94);
-  const size = SIZES[state.ground.size];
+  // the extension always spans the full width — only the depth varies, and a
+  // loft-only project switches it off entirely
+  const ext = { w: HOUSE.w, d: state.ground.enabled ? state.ground.depth : 0 };
+  // house z: -D → 0, garden grows +z. The depth is the same figure the loft
+  // is priced per metre against, so the drawing tracks the estimate.
+  const D = state.loft.depth;
+  const ROOF_H = D * ROOF_PITCH;
 
   return (
     <group ref={ref}>
@@ -80,7 +97,11 @@ export function House({ state }: { state: CalculatorState }) {
         w={W}
         h={WALL_H}
         t={WALL_T}
-        openings={REAR_OPENINGS}
+        openings={
+          state.ground.enabled
+            ? REAR_OPENINGS
+            : [...REAR_OPENINGS, ...REAR_GROUND_OPENINGS]
+        }
         matId="houseBrick"
         position={[0, 0, -WALL_T]}
       />
@@ -150,6 +171,28 @@ export function House({ state }: { state: CalculatorState }) {
         <Win key={x} w={0.95} h={1.4} stone reveal={0.12} position={[x, 4.25, 0.01]} />
       ))}
 
+      {/* rear ground floor — revealed once the extension is switched off */}
+      {!state.ground.enabled && (
+        <>
+          <Win
+            w={1.56}
+            h={2.06}
+            mullion
+            frameColor="#1e2124"
+            reveal={0.12}
+            position={[-1.45, 1.16, 0.01]}
+          />
+          <Win w={1.44} h={1.39} stone reveal={0.12} position={[1.55, 1.6, 0.01]} />
+          {/* stone threshold under the garden doors */}
+          <CBox
+            size={[1.86, 0.08, 0.42]}
+            position={[-1.45, 0.06, 0.2]}
+            color="#c9c2b2"
+            castShadow={false}
+          />
+        </>
+      )}
+
       {/* front facade */}
       <group position={[0, 0, -D]} rotation={[0, Math.PI, 0]}>
         <FrontDoor x={-1.7} />
@@ -161,18 +204,22 @@ export function House({ state }: { state: CalculatorState }) {
       </group>
 
       {/* configurable pieces */}
-      <Extension
-        width={size.w}
-        depth={size.d}
-        material={state.ground.material}
-        roof={state.ground.roof}
-        glazing={state.ground.glazing}
-        frame={state.ground.frame}
-        roofFinish={state.loft.finish}
-      />
+      {state.ground.enabled && (
+        <Extension
+          width={ext.w}
+          depth={ext.d}
+          tier={state.ground.tier}
+          material={state.ground.material}
+          roof={state.ground.roof}
+          glazing={state.ground.glazing}
+          frame={state.ground.frame}
+          roofFinish={state.loft.finish}
+        />
+      )}
       <Loft
         type={state.loft.type}
         finish={state.loft.finish}
+        frame={state.loft.frame}
         roofW={W + OVER * 2}
         slopeHalfD={(D + OVER * 2) / 2}
         eaveY={WALL_H}
@@ -180,12 +227,7 @@ export function House({ state }: { state: CalculatorState }) {
         rearEaveZ={-D / 2 + (D + OVER * 2) / 2}
       />
 
-      <Garden
-        houseW={W}
-        houseD={D}
-        patio={state.ground.patio}
-        ext={{ w: size.w, d: size.d }}
-      />
+      <Garden houseW={W} houseD={D} patio={state.ground.patio} ext={ext} />
     </group>
   );
 }

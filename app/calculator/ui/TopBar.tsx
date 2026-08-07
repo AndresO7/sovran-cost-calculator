@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { HOUSE } from "../config";
-import { formatPrice, PriceRange } from "../pricing";
-import { CalculatorAction } from "../state";
+import { formatPrice, PriceBreakdown } from "../pricing";
+import { CalculatorAction, LocationState } from "../state";
+import { ZONES } from "../zones";
 import { ACCENT, Arrow, arrowButton, FG, LINE, microLabel, MUTED } from "./controls";
 
 function useCountUp(value: number): number {
@@ -24,16 +25,22 @@ function useCountUp(value: number): number {
   return display;
 }
 
-/** Sub-toolbar under the site nav: property label · live estimate · CTA. */
+/** Sub-toolbar under the site nav: property · zone · live estimate · CTA. */
 export function TopBar({
   price,
+  location,
   dispatch,
 }: {
-  price: PriceRange;
+  price: PriceBreakdown;
+  location: LocationState;
   dispatch: React.Dispatch<CalculatorAction>;
 }) {
-  const low = useCountUp(price.low);
-  const high = useCountUp(price.high);
+  const low = useCountUp(price.total.low);
+  const high = useCountUp(price.total.high);
+  const zone = ZONES[price.zone];
+  // with neither project selected there is nothing to price — showing £0
+  // would read as "this build is free" rather than "nothing chosen yet"
+  const hasWorks = price.extension !== null || price.loft !== null;
 
   return (
     <div
@@ -84,6 +91,44 @@ export function TopBar({
         </span>
       </div>
 
+      {/* pricing zone the estimate is derived from */}
+      <div
+        className="calc-zone"
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          gap: 8,
+          padding: "5px 11px",
+          border: "1px solid rgba(184,148,78,0.4)",
+          background: "rgba(184,148,78,0.07)",
+          whiteSpace: "nowrap",
+        }}
+        title={`${zone.label} — ${zone.sub}`}
+      >
+        <span
+          style={{
+            fontFamily: "var(--font-bodoni)",
+            fontWeight: 600,
+            fontSize: 12,
+            color: ACCENT,
+          }}
+        >
+          {zone.label}
+        </span>
+        <span
+          style={{
+            fontFamily: "var(--font-outfit)",
+            fontWeight: 300,
+            fontSize: "clamp(9px, 0.7vw, 10.5px)",
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: MUTED,
+          }}
+        >
+          {location.borough ?? zone.sub}
+        </span>
+      </div>
+
       <div style={{ flex: 1 }} />
 
       {/* live estimate, Didone numerals */}
@@ -97,15 +142,32 @@ export function TopBar({
             fontWeight: 600,
             fontSize: "clamp(17px, 1.6vw, 24px)",
             letterSpacing: "0.02em",
-            color: FG,
+            color: hasWorks ? FG : MUTED,
             fontVariantNumeric: "tabular-nums",
             whiteSpace: "nowrap",
             lineHeight: 1,
           }}
         >
-          {formatPrice(low)}
-          <span style={{ color: ACCENT, padding: "0 0.3em", fontWeight: 400 }}>—</span>
-          {formatPrice(high)}
+          {hasWorks ? (
+            <>
+              {formatPrice(low)}
+              <span style={{ color: ACCENT, padding: "0 0.3em", fontWeight: 400 }}>
+                —
+              </span>
+              {formatPrice(high)}
+            </>
+          ) : (
+            <span
+              style={{
+                fontFamily: "var(--font-outfit)",
+                fontWeight: 300,
+                fontSize: "clamp(11px, 0.9vw, 13px)",
+                letterSpacing: "0.06em",
+              }}
+            >
+              Select works to price
+            </span>
+          )}
         </span>
       </div>
 
@@ -115,13 +177,22 @@ export function TopBar({
       <button
         className="calc-cta"
         onClick={() => dispatch({ type: "SET_QUOTE_OPEN", open: true })}
-        style={{ ...arrowButton, padding: "10px clamp(14px, 1.6vw, 22px)" }}
+        disabled={!hasWorks}
+        title={hasWorks ? undefined : "Add an extension or a loft conversion first"}
+        style={{
+          ...arrowButton,
+          padding: "10px clamp(14px, 1.6vw, 22px)",
+          opacity: hasWorks ? 1 : 0.4,
+          cursor: hasWorks ? "pointer" : "not-allowed",
+        }}
         onMouseEnter={(e) => {
+          if (!hasWorks) return;
           e.currentTarget.style.background = FG;
           e.currentTarget.style.color = "#f8f6f3";
           e.currentTarget.style.borderColor = FG;
         }}
         onMouseLeave={(e) => {
+          if (!hasWorks) return;
           e.currentTarget.style.background = "transparent";
           e.currentTarget.style.color = FG;
           e.currentTarget.style.borderColor = "rgba(26,25,22,0.2)";
