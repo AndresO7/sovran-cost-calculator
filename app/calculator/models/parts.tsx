@@ -316,7 +316,8 @@ function buildRoofGeometry(
   d: number,
   h: number,
   hipL: number,
-  hipR: number
+  hipR: number,
+  rearDepth: number
 ): THREE.BufferGeometry {
   const positions: number[] = [];
   const uvs: number[] = [];
@@ -349,9 +350,19 @@ function buildRoofGeometry(
   // front slope (faces -z)
   tri(A, B, p2, [x0, 0], [x1, 0], [p2.x, slope]);
   tri(A, p2, p1, [x0, 0], [p2.x, slope], [p1.x, slope]);
-  // rear slope (faces +z)
-  tri(C, D, p1, [x1, 0], [x0, 0], [p1.x, slope]);
-  tri(C, p1, p2, [x1, 0], [p1.x, slope], [p2.x, slope]);
+  // Rear slope (faces +z). A dormer eats into it from the ridge down, so it
+  // is drawn only as far up as `rearDepth` — otherwise the slope would run
+  // straight through the dormer and show as a ceiling inside the loft.
+  const cut = Math.min(rearDepth, d / 2);
+  if (cut > 0.001) {
+    const zc = z1 - cut;
+    const yc = (h * cut) / (d / 2);
+    const v = (slope * cut) / (d / 2);
+    const C2 = new THREE.Vector3(x1, yc, zc);
+    const D2 = new THREE.Vector3(x0, yc, zc);
+    tri(C, D, D2, [x1, 0], [x0, 0], [x0, v]);
+    tri(C, D2, C2, [x1, 0], [x0, v], [x1, v]);
+  }
   // hip ends (only when hipped)
   if (hipL > 0.001) tri(D, A, p1, [z1, 0], [z0, 0], [0, slope]);
   if (hipR > 0.001) tri(B, C, p2, [z0, 0], [z1, 0], [0, slope]);
@@ -372,14 +383,29 @@ interface RoofProps {
   h: number;
   hipL?: number;
   hipR?: number;
+  /**
+   * How much of the rear slope to draw, measured up from the rear eave.
+   * Defaults to the whole slope; a dormer passes the strip it leaves below
+   * its face so the roof stops where the dormer starts.
+   */
+  rearDepth?: number;
   finish: AnyMaterialId;
   position: [number, number, number];
 }
 
-export function Roof({ w, d, h, hipL = 0, hipR = 0, finish, position }: RoofProps) {
+export function Roof({
+  w,
+  d,
+  h,
+  hipL = 0,
+  hipR = 0,
+  rearDepth = Infinity,
+  finish,
+  position,
+}: RoofProps) {
   const geometry = useMemo(
-    () => buildRoofGeometry(w, d, h, hipL, hipR),
-    [w, d, h, hipL, hipR]
+    () => buildRoofGeometry(w, d, h, hipL, hipR, rearDepth),
+    [w, d, h, hipL, hipR, rearDepth]
   );
   const material = useMemo(() => {
     const m = metricMaterial(finish, TILE_METRES, TILE_METRES).clone();

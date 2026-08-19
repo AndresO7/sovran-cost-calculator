@@ -24,8 +24,6 @@ import {
   LoftTypeId,
   MATERIALS,
   MaterialId,
-  PATIOS,
-  PatioId,
   TIERS,
   TierId,
 } from "../config";
@@ -322,19 +320,6 @@ export function ConfigPanel({
                     onChange={(id) => dispatch({ type: "SET_FRAME", frame: id as FrameId })}
                   />
                 </Section>
-
-                <Section index="08" label="Patio finish">
-                  <SwatchRow
-                    options={(Object.keys(PATIOS) as PatioId[]).map((id) => ({
-                      id,
-                      label: PATIOS[id].label,
-                      price: PATIOS[id].price,
-                    }))}
-                    value={state.ground.patio}
-                    onChange={(id) => dispatch({ type: "SET_PATIO", patio: id as PatioId })}
-                  />
-                  <p style={note}>Landscaping shown for context — quoted separately.</p>
-                </Section>
               </>
             )}
           </>
@@ -413,7 +398,7 @@ export function ConfigPanel({
               </>
             )}
 
-            <Section index={hasLoft ? "05" : "02"} label="Roof finish — full re-roof">
+            <Section index={hasLoft ? "05" : "02"} label="Roof finish — main roof">
               <SwatchRow
                 options={(Object.keys(LOFT_FINISHES) as LoftFinishId[]).map((id) => ({
                   id,
@@ -426,8 +411,9 @@ export function ConfigPanel({
                 }
               />
               <p style={note}>
-                Applied across the entire roof — main slopes and dormer cladding.
-                Shown for context; roofing is quoted separately.
+                Applied to the main roof slopes. Dormer cladding and extension
+                roofing stay in standard grey. Shown for context; roofing is
+                quoted separately.
               </p>
             </Section>
           </>

@@ -11,7 +11,6 @@ import {
   LoftLayoutId,
   LoftTypeId,
   MaterialId,
-  PatioId,
   TierId,
 } from "./config";
 import { LookupStatus, ZoneId } from "./zones";
@@ -46,7 +45,6 @@ export interface CalculatorState {
     roof: ExtRoofId;
     glazing: GlazingId;
     frame: FrameId;
-    patio: PatioId;
   };
   loft: {
     type: LoftTypeId;
@@ -72,7 +70,6 @@ export const initialState: CalculatorState = {
     roof: "flat",
     glazing: "bifold",
     frame: "black",
-    patio: "york",
   },
   loft: {
     type: "none",
@@ -99,7 +96,6 @@ export type CalculatorAction =
   | { type: "SET_EXT_ROOF"; roof: ExtRoofId }
   | { type: "SET_GLAZING"; glazing: GlazingId }
   | { type: "SET_FRAME"; frame: FrameId }
-  | { type: "SET_PATIO"; patio: PatioId }
   | { type: "SET_LOFT_TYPE"; loftType: LoftTypeId }
   | { type: "SET_LOFT_DEPTH"; depth: number }
   | { type: "SET_LOFT_LAYOUT"; layout: LoftLayoutId }
@@ -162,8 +158,6 @@ export function reducer(
       return { ...state, ground: { ...state.ground, glazing: action.glazing } };
     case "SET_FRAME":
       return { ...state, ground: { ...state.ground, frame: action.frame } };
-    case "SET_PATIO":
-      return { ...state, ground: { ...state.ground, patio: action.patio } };
     case "SET_LOFT_TYPE":
       return { ...state, loft: { ...state.loft, type: action.loftType } };
     case "SET_LOFT_DEPTH":

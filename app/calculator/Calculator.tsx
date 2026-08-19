@@ -123,19 +123,21 @@ function ViewportDressing({ state }: { state: CalculatorState }) {
         </div>
       </div>
 
-      {/* ghost wordmark */}
+      {/* ghost wordmark, centred behind the model */}
       <span
         aria-hidden
         style={{
           position: "absolute",
-          right: `calc(${inset} + 16px)`,
+          left: "50%",
           bottom: `calc(${inset} + 2px)`,
+          transform: "translateX(-50%)",
           fontFamily: "var(--font-bodoni)",
           fontWeight: 500,
           fontSize: "clamp(34px, 4.5vw, 64px)",
           letterSpacing: "0.16em",
           color: "rgba(52, 46, 38, 0.07)",
           lineHeight: 1,
+          whiteSpace: "nowrap",
           userSelect: "none",
         }}
       >
@@ -145,11 +147,12 @@ function ViewportDressing({ state }: { state: CalculatorState }) {
       <div
         style={{
           position: "absolute",
-          left: `calc(${inset} + 18px)`,
+          right: `calc(${inset} + 18px)`,
           bottom: `calc(${inset} + 8px)`,
           ...microLabel,
           fontSize: 9,
           color: INK_FAINT,
+          textAlign: "right",
         }}
       >
         Drag to orbit · Scroll to zoom

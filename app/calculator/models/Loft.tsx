@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
-import { FrameId, LOFT_FRAMES, LoftFinishId, LoftTypeId } from "../config";
+import { FrameId, LOFT_FRAMES, LoftLayoutId, LoftTypeId } from "../config";
 import {
   flatMaterial,
   glassMaterial,
@@ -11,7 +11,8 @@ import { CBox, Chimney, TexBox, usePopIn, WallWithOpenings } from "./parts";
 
 interface LoftProps {
   type: LoftTypeId;
-  finish: LoftFinishId;
+  /** which rooms the conversion is divided into */
+  layout: LoftLayoutId;
   /** joinery colour for the dormer windows */
   frame: FrameId;
   /** eaves width of the host roof (incl. overhang) */
@@ -26,6 +27,20 @@ interface LoftProps {
   rearEaveZ: number;
 }
 
+/**
+ * Dormer cladding is always standard grey slate. It deliberately does not
+ * follow the whole-house re-roof choice: the dormer is new construction and
+ * reads as such, and a clay-tiled house getting a clay-tiled dormer box
+ * flattens the two into one shape.
+ */
+const DORMER_FINISH = "slate" as const;
+
+/**
+ * Strip of rear roof left below a box dormer face. The house passes this to
+ * `Roof` so the slope stops where the dormer starts.
+ */
+export const BOX_DORMER_EAVE_STRIP = 0.4;
+
 /** Loft conversion pieces sitting on the rear roof slope. */
 export function Loft(props: LoftProps) {
   switch (props.type) {
@@ -38,14 +53,16 @@ export function Loft(props: LoftProps) {
   }
 }
 
-/** Box on the rear slope, clad in the whole-roof finish, chimney riding the ridge. */
+/** Full-width box on the rear slope, slate-clad, chimney riding the ridge. */
 function BoxDormer(props: LoftProps) {
   const ref = useRef<THREE.Group>(null);
   usePopIn(ref, 0.05);
-  const { roofW, slopeHalfD, eaveY, rise, rearEaveZ, finish, frame } = props;
+  const { roofW, slopeHalfD, eaveY, rise, rearEaveZ, frame, layout } = props;
   const frameColor = LOFT_FRAMES[frame].color;
-  const w = roofW - 1.7; // set back from both gables
-  const frontZ = rearEaveZ - 0.4;
+  // full width: the box runs the whole roof, stopping just inside the gable
+  // walls so its cheeks never fight them for the same plane
+  const w = roofW - 0.42;
+  const frontZ = rearEaveZ - BOX_DORMER_EAVE_STRIP;
   const ridgeZ = rearEaveZ - slopeHalfD;
   const baseY = eaveY + 0.2;
   const deckT = 0.12;
@@ -60,16 +77,16 @@ function BoxDormer(props: LoftProps) {
   const deckW = w + 0.16;
   const deckD = frontZ + 0.08 - (ridgeZ + 0.06);
   const deckZ = (frontZ + 0.08 + ridgeZ + 0.06) / 2;
-  const winW = 1.5;
+  const winW = 1.7;
   // A shallower house gives a lower roof and so a shorter dormer face. The
   // glazing has to follow it — punching a 1.5 m opening into a 1.4 m wall
   // leaves WallWithOpenings with negative-height pieces.
   const winH = Math.min(1.5, h - 0.45);
+  const winX = w * 0.235;
   const openings = useMemo(
-    () => [-1, 1].map((s) => ({ x: s * w * 0.22, y: h / 2, w: winW, h: winH })),
-    [w, h, winH]
+    () => [-1, 1].map((s) => ({ x: s * winX, y: h / 2, w: winW, h: winH })),
+    [winX, h, winH]
   );
-  const interiorColor = "#b8b0a1";
 
   return (
     <group ref={ref}>
@@ -78,43 +95,42 @@ function BoxDormer(props: LoftProps) {
       <TexBox
         size={[wallT, h, bodyD]}
         position={[-w / 2 + wallT / 2, baseY + h / 2, bodyZ]}
-        matId={finish}
+        matId={DORMER_FINISH}
       />
       {/* RIGHT wall */}
       <TexBox
         size={[wallT, h, bodyD]}
         position={[w / 2 - wallT / 2, baseY + h / 2, bodyZ]}
-        matId={finish}
+        matId={DORMER_FINISH}
       />
       {/* BACK wall */}
       <TexBox
         size={[w - wallT * 2, h, wallT]}
         position={[0, baseY + h / 2, bodyZ - bodyD / 2 + wallT / 2]}
-        matId={finish}
+        matId={DORMER_FINISH}
       />
-      {/* Interior surfaces seen through the glazing */}
-      <DormerInterior
-        w={w}
-        h={h}
-        d={bodyD}
-        wallT={wallT}
-        baseY={baseY}
-        bodyZ={bodyZ}
-        color={interiorColor}
+      {/* the converted room, seen through the glazing */}
+      <LoftRoom
+        w={w - wallT * 2}
+        h={h - 0.04}
+        zBack={bodyZ - (bodyD - wallT) / 2}
+        zFront={bodyZ + (bodyD - wallT) / 2}
+        floorY={baseY + 0.02}
+        layout={layout}
       />
       <WallWithOpenings
         w={w}
         h={h}
         t={wallT}
         openings={openings}
-        matId={finish}
+        matId={DORMER_FINISH}
         position={[0, baseY, frontZ - wallT]}
       />
-      {/* deck meeting the ridge in the same finish, framed all round by a lip */}
+      {/* deck meeting the ridge in the same cladding, framed all round by a lip */}
       <TexBox
         size={[deckW, deckT, deckD]}
         position={[0, deckTopY - deckT / 2, deckZ]}
-        matId={finish}
+        matId={DORMER_FINISH}
       />
       <DeckFrame w={deckW} d={deckD} y={deckTopY + 0.02} z={deckZ} />
       {/* frameless glazing sunk inside the openings, like the reference */}
@@ -124,7 +140,7 @@ function BoxDormer(props: LoftProps) {
           w={winW}
           h={winH}
           frameColor={frameColor}
-          position={[s * w * 0.22, baseY + h / 2, frontZ]}
+          position={[s * winX, baseY + h / 2, frontZ]}
         />
       ))}
       {/* the conversion brings the stack back, riding the ridge at the gable */}
@@ -205,10 +221,11 @@ function DeckFrame({ w, d, y, z }: { w: number; d: number; y: number; z: number 
 function MansardDormer(props: LoftProps) {
   const ref = useRef<THREE.Group>(null);
   usePopIn(ref, 0.05);
-  const { roofW, slopeHalfD, eaveY, rise, rearEaveZ, finish, frame } = props;
+  const { roofW, slopeHalfD, eaveY, rise, rearEaveZ, frame, layout } = props;
   const frameColor = LOFT_FRAMES[frame].color;
   const alpha = 0.3; // lean from vertical, radians (~17°)
-  const w = roofW - 0.6;
+  // full width, matching the box dormer — a mansard always runs gable to gable
+  const w = roofW - 0.42;
   // face rises to just under the crown, which sits level with the main ridge
   const hVert = rise - 0.06;
   const faceLen = hVert / Math.cos(alpha);
@@ -251,12 +268,10 @@ function MansardDormer(props: LoftProps) {
   }, [w, eaveY, topY, rearEaveZ, topZ, deckFrontZ]);
 
   const cheekMat = useMemo(() => {
-    const m = metricMaterial(finish, TILE_METRES, TILE_METRES).clone();
+    const m = metricMaterial(DORMER_FINISH, TILE_METRES, TILE_METRES).clone();
     m.side = THREE.DoubleSide;
     return m;
-  }, [finish]);
-
-  const mansardInterior = flatMaterial("#b8b0a1", 0.95);
+  }, []);
 
   const winW = 1.1;
   // Same constraint as the box dormer: the slated face shortens with the roof,
@@ -286,7 +301,7 @@ function MansardDormer(props: LoftProps) {
           h={faceLen}
           t={0.14}
           openings={openings}
-          matId={finish}
+          matId={DORMER_FINISH}
           position={[0, -faceLen / 2, -0.07]}
         />
         {([-1, 1] as const).map((s) => (
@@ -298,11 +313,18 @@ function MansardDormer(props: LoftProps) {
             position={[s * w * 0.22, 0.12, 0]}
           />
         ))}
-        {/* Interior wall behind the slated face, seen through the glazing */}
-        <mesh position={[0, 0, -0.095]} material={mansardInterior}>
-          <boxGeometry args={[w - 0.3, faceLen - 0.2, 0.02]} />
-        </mesh>
       </group>
+
+      {/* the converted room, seen through the glazing */}
+      <LoftRoom
+        w={w - 0.3}
+        h={deckTopY - deckT - (eaveY + 0.02)}
+        zBack={deckFrontZ + 0.02}
+        zFront={rearEaveZ - 0.06}
+        innerTo={topZ - 0.04}
+        floorY={eaveY + 0.02}
+        layout={layout}
+      />
 
       {/* slate cheeks close the sides */}
       <mesh geometry={cheekGeo} material={cheekMat} castShadow receiveShadow />
@@ -467,49 +489,233 @@ function MansardWindow({
   );
 }
 
-/** Interior surfaces for the dormer, visible through windows. */
-function DormerInterior({
+/* --------------------------------- interiors -------------------------------- */
+
+/** Off-white plaster on every surface of the converted room. */
+const ROOM = "#cfc7b7";
+
+type RoomKind = "bed" | "office" | "bath";
+
+/**
+ * How the conversion is divided, as fractions across the width of the loft.
+ * These mirror the priced layouts in `config.ts` — B buys an ensuite off the
+ * bedroom, C splits the bedroom in two, D turns the second room into a study.
+ */
+const LAYOUT_ROOMS: Record<LoftLayoutId, Array<{ x0: number; x1: number; kind: RoomKind }>> = {
+  a: [{ x0: 0, x1: 1, kind: "bed" }],
+  b: [
+    { x0: 0, x1: 0.72, kind: "bed" },
+    { x0: 0.72, x1: 1, kind: "bath" },
+  ],
+  c: [
+    { x0: 0, x1: 0.42, kind: "bed" },
+    { x0: 0.42, x1: 0.78, kind: "bed" },
+    { x0: 0.78, x1: 1, kind: "bath" },
+  ],
+  d: [
+    { x0: 0, x1: 0.44, kind: "bed" },
+    { x0: 0.44, x1: 0.78, kind: "office" },
+    { x0: 0.78, x1: 1, kind: "bath" },
+  ],
+};
+
+/**
+ * The converted loft itself: a plastered shell, the partitions the chosen
+ * layout implies, and enough furniture for each room to read as what it is
+ * through a dormer window. It also does the structural job of closing the
+ * loft off — without a floor and a back wall you look straight through the
+ * glazing at the underside of the roof.
+ */
+function LoftRoom({
   w,
   h,
-  d,
-  wallT,
-  baseY,
-  bodyZ,
-  color,
+  zBack,
+  zFront,
+  floorY,
+  layout,
+  innerTo,
 }: {
+  /** clear internal width */
   w: number;
+  /** floor to ceiling */
   h: number;
-  d: number;
-  wallT: number;
-  baseY: number;
-  bodyZ: number;
-  color: string;
+  /** z of the wall furthest from the windows (the ridge side) */
+  zBack: number;
+  /** z the floor runs out to */
+  zFront: number;
+  floorY: number;
+  layout: LoftLayoutId;
+  /**
+   * Where the full-height pieces — walls, partitions, ceiling — have to stop.
+   * A mansard face leans back as it rises, so anything built to the eave line
+   * would break out through it near the head. The floor still runs to
+   * `zFront`, below the windows where nothing can poke through.
+   */
+  innerTo?: number;
 }) {
-  const mat = flatMaterial(color, 0.95);
-  const innerW = w - wallT * 2;
-  const innerD = d - wallT;
+  const d = zFront - zBack;
+  const innerD = (innerTo ?? zFront) - zBack;
+  if (w < 0.5 || h < 0.5 || d < 0.5 || innerD < 0.3) return null;
+
+  const shell = flatMaterial(ROOM, 0.95);
+  const midZ = (zBack + zFront) / 2;
+  const innerZ = zBack + innerD / 2;
+  const rooms = LAYOUT_ROOMS[layout];
 
   return (
     <group>
       {/* floor */}
-      <mesh position={[0, baseY + 0.01, bodyZ]} material={mat}>
-        <boxGeometry args={[innerW, 0.02, innerD]} />
-      </mesh>
+      <TexBox
+        size={[w, 0.04, d]}
+        position={[0, floorY - 0.02, midZ]}
+        matId="oakFloor"
+        castShadow={false}
+      />
       {/* ceiling */}
-      <mesh position={[0, baseY + h - 0.01, bodyZ]} material={mat}>
-        <boxGeometry args={[innerW, 0.02, innerD]} />
+      <mesh position={[0, floorY + h, innerZ]} material={shell} castShadow={false}>
+        <boxGeometry args={[w, 0.04, innerD]} />
       </mesh>
-      {/* left interior wall */}
-      <mesh position={[-w / 2 + wallT + 0.01, baseY + h / 2, bodyZ]} material={mat}>
-        <boxGeometry args={[0.02, h, innerD]} />
+      {/* back wall, against the ridge */}
+      <mesh position={[0, floorY + h / 2, zBack]} material={shell} castShadow={false}>
+        <boxGeometry args={[w, h, 0.04]} />
       </mesh>
-      {/* right interior wall */}
-      <mesh position={[w / 2 - wallT - 0.01, baseY + h / 2, bodyZ]} material={mat}>
-        <boxGeometry args={[0.02, h, innerD]} />
-      </mesh>
-      {/* back interior wall */}
-      <mesh position={[0, baseY + h / 2, bodyZ - innerD / 2 + 0.01]} material={mat}>
-        <boxGeometry args={[innerW, h, 0.02]} />
+      {/* side walls */}
+      {([-1, 1] as const).map((s) => (
+        <mesh
+          key={s}
+          position={[(s * w) / 2, floorY + h / 2, innerZ]}
+          material={shell}
+          castShadow={false}
+        >
+          <boxGeometry args={[0.04, h, innerD]} />
+        </mesh>
+      ))}
+
+      {/* partitions between rooms */}
+      {rooms.slice(1).map((r) => (
+        <mesh
+          key={`part-${r.x0}`}
+          position={[(r.x0 - 0.5) * w, floorY + h / 2, innerZ]}
+          material={shell}
+          castShadow={false}
+        >
+          <boxGeometry args={[0.09, h, innerD]} />
+        </mesh>
+      ))}
+
+      {/* what each room is furnished with */}
+      {rooms.map((r) => {
+        const zoneW = (r.x1 - r.x0) * w - 0.14;
+        if (zoneW < 0.55) return null;
+        const cx = ((r.x0 + r.x1) / 2 - 0.5) * w;
+        const props = { zoneW, roomD: innerD, cx, zBack, floorY };
+        if (r.kind === "bed") return <Bed key={`${r.kind}${r.x0}`} {...props} />;
+        if (r.kind === "office") return <Desk key={`${r.kind}${r.x0}`} {...props} />;
+        return <Ensuite key={`${r.kind}${r.x0}`} {...props} />;
+      })}
+    </group>
+  );
+}
+
+interface FurnitureProps {
+  /** clear width of the room this piece sits in */
+  zoneW: number;
+  /** clear depth of the loft, front to back */
+  roomD: number;
+  /** centre of the room in x */
+  cx: number;
+  /** z of the back wall — furniture stands against it, facing the windows */
+  zBack: number;
+  floorY: number;
+}
+
+/** Double bed against the back wall: base, duvet, pillows, headboard. */
+function Bed({ zoneW, roomD, cx, zBack, floorY }: FurnitureProps) {
+  const bw = Math.min(1.35, zoneW * 0.78);
+  const bd = Math.min(1.95, roomD * 0.74);
+  return (
+    <group position={[cx, floorY, zBack + bd / 2 + 0.12]}>
+      <CBox size={[bw, 0.26, bd]} position={[0, 0.13, 0]} color="#7a6448" castShadow={false} />
+      <CBox
+        size={[bw - 0.05, 0.14, bd * 0.68]}
+        position={[0, 0.33, bd * 0.14]}
+        color="#e9e4d9"
+        castShadow={false}
+      />
+      <CBox
+        size={[bw * 0.82, 0.11, 0.32]}
+        position={[0, 0.33, -bd / 2 + 0.24]}
+        color="#f4f1ea"
+        castShadow={false}
+      />
+      <CBox
+        size={[bw, 0.6, 0.05]}
+        position={[0, 0.3, -bd / 2 - 0.03]}
+        color="#6a563f"
+        castShadow={false}
+      />
+    </group>
+  );
+}
+
+/** Study: desk against the back wall with a chair pulled out from it. */
+function Desk({ zoneW, roomD, cx, zBack, floorY }: FurnitureProps) {
+  const dw = Math.min(1.25, zoneW * 0.82);
+  const dd = Math.min(0.55, roomD * 0.3);
+  return (
+    <group position={[cx, floorY, zBack + dd / 2 + 0.14]}>
+      <CBox size={[dw, 0.05, dd]} position={[0, 0.73, 0]} color="#8d7455" castShadow={false} />
+      {([-1, 1] as const).map((s) => (
+        <CBox
+          key={s}
+          size={[0.06, 0.71, 0.06]}
+          position={[s * (dw / 2 - 0.06), 0.355, 0]}
+          color="#4a4038"
+          castShadow={false}
+        />
+      ))}
+      <CBox
+        size={[0.42, 0.05, 0.42]}
+        position={[0, 0.44, dd / 2 + 0.34]}
+        color="#3f4449"
+        castShadow={false}
+      />
+      <CBox
+        size={[0.42, 0.48, 0.05]}
+        position={[0, 0.7, dd / 2 + 0.53]}
+        color="#3f4449"
+        castShadow={false}
+      />
+    </group>
+  );
+}
+
+/** Ensuite: vanity unit and mirror on the back wall, glass shower screen. */
+function Ensuite({ zoneW, roomD, cx, zBack, floorY }: FurnitureProps) {
+  const vw = Math.min(0.72, zoneW * 0.66);
+  const screenZ = Math.min(0.9, roomD * 0.45);
+  return (
+    <group position={[cx, floorY, zBack]}>
+      <CBox size={[vw, 0.78, 0.4]} position={[0, 0.39, 0.28]} color="#e2ddd2" castShadow={false} />
+      <CBox
+        size={[vw + 0.05, 0.05, 0.44]}
+        position={[0, 0.8, 0.28]}
+        color="#f3f0e9"
+        castShadow={false}
+      />
+      <CBox
+        size={[vw * 0.78, 0.5, 0.02]}
+        position={[0, 1.42, 0.05]}
+        color="#b9c2c6"
+        castShadow={false}
+      />
+      {/* frameless shower screen further down the room */}
+      <mesh
+        position={[0, 0.9, screenZ + 0.5]}
+        material={glassMaterial()}
+        castShadow={false}
+      >
+        <planeGeometry args={[Math.max(0.4, vw), 1.8]} />
       </mesh>
     </group>
   );

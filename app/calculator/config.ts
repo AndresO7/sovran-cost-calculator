@@ -18,11 +18,10 @@ export type LoftTypeId = "none" | "boxDormer" | "mansardDormer";
 export type LoftLayoutId = "a" | "b" | "c" | "d";
 export type LoftFinishId = "slate" | "clay" | "zincRoof";
 export type FrameId = "black" | "white" | "anthracite" | "bronze";
-export type PatioId = "york" | "porcelain" | "decking";
 
 /** The single host property every project is modelled on. */
 export const HOUSE = {
-  label: "The Sovran House",
+  label: "Sovran House",
   sub: "Brick semi · London",
   /** width across the rear facade, metres */
   w: 6.6,
@@ -197,10 +196,4 @@ export const LOFT_FINISHES: Record<LoftFinishId, PricedOption> = {
   slate: { label: "Welsh slate", price: 0 },
   clay: { label: "Clay tiles", price: 0 },
   zincRoof: { label: "Zinc seam", price: 0 },
-};
-
-export const PATIOS: Record<PatioId, PricedOption> = {
-  york: { label: "York stone", price: 0 },
-  porcelain: { label: "Porcelain", price: 0 },
-  decking: { label: "Hardwood deck", price: 0 },
 };

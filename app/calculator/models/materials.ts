@@ -222,8 +222,8 @@ const EXTRA_SPECS = {
   },
   grass: { painter: paintNoise("#5f7c38", 0.08, 101), roughness: 1 },
   paving: { painter: paintPaving(111, "#d3c8a4", "#a89a78"), roughness: 0.9 },
-  porcelain: { painter: paintPaving(121, "#cfc9be", "#928c80", 3, 0.04), roughness: 0.55 },
-  decking: { painter: paintPlanks("#8a6a48", "#57422c", 9, 131), roughness: 0.8 },
+  // pale engineered oak, seen through the extension glazing
+  oakFloor: { painter: paintPlanks("#c3a87f", "#a98d64", 7, 121), roughness: 0.62 },
   zincPanels: {
     painter: paintPanelSeams("#7d858e", "#656c74", 4, 0.06, 141),
     roughness: 0.45,

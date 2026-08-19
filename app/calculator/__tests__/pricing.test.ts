@@ -22,7 +22,6 @@ const base: CalculatorState = {
     roof: "flat",
     glazing: "double",
     frame: "black",
-    patio: "york",
   },
   loft: { type: "none", depth: 7.4, layout: "a", frame: "black", finish: "slate" },
   activeTab: "ground",

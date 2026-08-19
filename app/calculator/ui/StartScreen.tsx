@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { CalculatorAction, LocationState } from "../state";
-import { lookupPostcode, LookupStatus, ZONES } from "../zones";
+import { lookupPostcode, LookupStatus } from "../zones";
 import { ACCENT, Arrow, FAINT, FG, GHOST, LINE, microLabel, MUTED } from "./controls";
 
 type Focus = "ground" | "loft" | "both";
@@ -81,12 +81,16 @@ const optionRow: React.CSSProperties = {
   color: "rgba(26,25,22,0.55)",
 };
 
-/** Zone 2 covers Greater London and the rest of the UK — the safe fallback. */
+/**
+ * Zone 2 covers Greater London and the rest of the UK — the safe fallback,
+ * used only when the lookup service itself is down. The postcode is still
+ * required; what is missing in that case is the borough, not the answer.
+ */
 const FALLBACK: LocationState = {
   postcode: "",
   zone: "zone2",
   borough: null,
-  status: "idle",
+  status: "error",
 };
 
 /**
@@ -245,7 +249,7 @@ export function StartScreen({ dispatch }: { dispatch: React.Dispatch<CalculatorA
             Your extension,
             <br />
             priced{" "}
-            <em style={{ fontStyle: "italic", color: ACCENT }}>in thirty seconds</em>
+            <em style={{ fontStyle: "italic", color: FG }}>in thirty seconds</em>
           </h1>
           <p
             data-intro
@@ -367,7 +371,9 @@ export function StartScreen({ dispatch }: { dispatch: React.Dispatch<CalculatorA
                 resolved={resolved}
                 onEdit={editPostcode}
                 onSubmit={lookup}
-                onSkip={() => begin({ ...FALLBACK, postcode: postcode.trim() })}
+                onContinueUnverified={() =>
+                  begin({ ...FALLBACK, postcode: postcode.trim().toUpperCase() })
+                }
               />
             )}
           </div>
@@ -378,9 +384,10 @@ export function StartScreen({ dispatch }: { dispatch: React.Dispatch<CalculatorA
 }
 
 /**
- * Postcode question. Resolving is a two-press affair on purpose: the first
- * press looks the postcode up and shows the borough and zone it landed in,
- * the second confirms it — so nobody is priced against a zone they never saw.
+ * Postcode question — mandatory, there is no way past it. Resolving is a
+ * two-press affair on purpose: the first press looks the postcode up and
+ * shows the area it landed in, the second confirms it. The rate band the
+ * postcode resolves to is never surfaced; it only drives the arithmetic.
  */
 function PostcodeStep({
   postcode,
@@ -388,17 +395,16 @@ function PostcodeStep({
   resolved,
   onEdit,
   onSubmit,
-  onSkip,
+  onContinueUnverified,
 }: {
   postcode: string;
   status: LookupStatus;
   resolved: LocationState | null;
   onEdit: (value: string) => void;
   onSubmit: (e: FormEvent<HTMLFormElement>) => void;
-  onSkip: () => void;
+  onContinueUnverified: () => void;
 }) {
   const loading = status === "loading";
-  const zone = resolved ? ZONES[resolved.zone] : null;
 
   return (
     <form onSubmit={onSubmit} noValidate>
@@ -469,8 +475,9 @@ function PostcodeStep({
         </button>
       </div>
 
-      {/* resolved zone — shown before the user commits to it */}
-      {resolved && zone && (
+      {/* the area the postcode landed in — shown before the user commits to
+          it, so the confirmation is of somewhere they recognise */}
+      {resolved && resolved.borough && (
         <div
           style={{
             display: "flex",
@@ -485,71 +492,51 @@ function PostcodeStep({
         >
           <span
             style={{
-              fontFamily: "var(--font-bodoni)",
-              fontWeight: 600,
-              fontSize: 15,
-              color: ACCENT,
-            }}
-          >
-            {zone.label}
-          </span>
-          <span
-            style={{
               fontFamily: "var(--font-outfit)",
               fontWeight: 400,
               fontSize: 12.5,
+              letterSpacing: "0.06em",
               color: FG,
             }}
           >
-            {zone.sub}
+            {resolved.borough}
           </span>
-          {resolved.borough && (
-            <span
-              style={{
-                fontFamily: "var(--font-outfit)",
-                fontWeight: 300,
-                fontSize: 11.5,
-                letterSpacing: "0.06em",
-                color: MUTED,
-                marginLeft: "auto",
-              }}
-            >
-              {resolved.borough}
-            </span>
-          )}
         </div>
       )}
 
       {status === "notfound" && (
         <p style={{ ...footnote, color: "#b06a4c" }}>
-          We couldn&apos;t find that postcode. Check it and try again, or
-          continue at Greater London rates.
+          We couldn&apos;t find that postcode. Check it and try again.
         </p>
       )}
       {status === "error" && (
-        <p style={{ ...footnote, color: "#b06a4c" }}>
-          The postcode lookup is unavailable right now. You can continue at
-          Greater London rates and we&apos;ll confirm your zone on the quote.
-        </p>
+        <>
+          <p style={{ ...footnote, color: "#b06a4c" }}>
+            The postcode lookup is unavailable right now. Try again in a
+            moment, or continue and we&apos;ll confirm your area on the quote.
+          </p>
+          <button
+            type="button"
+            onClick={onContinueUnverified}
+            disabled={!postcode.trim()}
+            style={{
+              ...footnote,
+              display: "block",
+              marginTop: 8,
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              textAlign: "left",
+              cursor: postcode.trim() ? "pointer" : "not-allowed",
+              opacity: postcode.trim() ? 1 : 0.5,
+              textDecoration: "underline",
+              textUnderlineOffset: 4,
+            }}
+          >
+            Continue with {postcode.trim().toUpperCase() || "this postcode"}
+          </button>
+        </>
       )}
-
-      <button
-        type="button"
-        onClick={onSkip}
-        style={{
-          ...footnote,
-          display: "block",
-          background: "transparent",
-          border: "none",
-          padding: 0,
-          textAlign: "left",
-          cursor: "pointer",
-          textDecoration: "underline",
-          textUnderlineOffset: 4,
-        }}
-      >
-        Skip — price at Greater London rates
-      </button>
     </form>
   );
 }

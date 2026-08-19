@@ -142,31 +142,40 @@ input:focus {
 }
 
 @media (max-width: 767px) {
+  /* The model stays put and only the options scroll: the page itself never
+     scrolls, the viewport keeps a fixed slice of the screen, and the panel
+     takes the rest with its own inner scroll. */
   body {
-    overflow: auto;
+    overflow: hidden;
   }
   .calc-root {
-    height: auto;
-    min-height: 100dvh;
+    height: 100dvh;
   }
   .calc-body {
     flex-direction: column;
   }
   .calc-viewport {
-    height: 56dvh;
+    height: 40dvh;
     flex: none;
   }
   .calc-panel {
     width: 100%;
+    flex: 1;
+    min-height: 0;
     border-left: none !important;
     border-top: 1px solid var(--line);
   }
   .calc-topbar {
     flex-wrap: wrap;
     height: auto !important;
-    padding-top: 12px !important;
-    padding-bottom: 12px !important;
-    row-gap: 10px !important;
+    padding-top: 9px !important;
+    padding-bottom: 9px !important;
+    row-gap: 8px !important;
+  }
+  /* dividers and secondary labels — dropped so the bar stays two rows and
+     the options below keep as much of the screen as possible */
+  .calc-topbar-trim {
+    display: none !important;
   }
   .site-nav-links {
     display: none !important;

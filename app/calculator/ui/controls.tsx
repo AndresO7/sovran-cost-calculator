@@ -390,15 +390,6 @@ const SWATCH_STYLES: Record<string, CSSProperties> = {
   anthracite: { background: "#3f4449" },
   bronze: { background: "linear-gradient(135deg, #7a6442 0%, #5e4a30 100%)" },
   white: { background: "#e6e0d4" },
-  york: {
-    background: "repeating-linear-gradient(0deg, #8d8474 0px 10px, #3a362f 10px 11.5px)",
-  },
-  porcelain: {
-    background: "repeating-linear-gradient(0deg, #b9b3a8 0px 13px, #56524a 13px 14.5px)",
-  },
-  decking: {
-    background: "repeating-linear-gradient(0deg, #6e5439 0px 6px, #3a2d20 6px 7.5px)",
-  },
 };
 
 interface SwatchOptionView {

@@ -7,7 +7,6 @@ import {
   ExtRoofId,
   FrameId,
   GlazingId,
-  LoftFinishId,
   MaterialId,
   TierId,
 } from "../config";
@@ -15,6 +14,14 @@ import { flatMaterial, glassMaterial, lightWashMaterial } from "./materials";
 import { CBox, LeanTo, TexBox } from "./parts";
 
 const EXT_WALL_H = 2.85;
+/** Off-white plaster — every interior surface the glazing lets you see. */
+const INTERIOR = "#cfc7b7";
+/**
+ * Extension roofing is standard grey membrane / slate and never follows the
+ * whole-house re-roof choice — a clay-tiled house does not get a clay-tiled
+ * flat roof, and the two read as separate builds on purpose.
+ */
+const EXT_ROOF_FINISH = "slate" as const;
 // the lean-to head must stay below the host's first-floor cills (~y 3.38)
 const PITCH_RISE = 0.45;
 
@@ -26,8 +33,6 @@ interface ExtensionProps {
   roof: ExtRoofId;
   glazing: GlazingId;
   frame: FrameId;
-  /** whole-house roof finish, used on the pitched lean-to */
-  roofFinish: LoftFinishId;
 }
 
 /**
@@ -44,7 +49,6 @@ export function Extension({
   roof,
   glazing,
   frame,
-  roofFinish,
 }: ExtensionProps) {
   const frameColor = EXT_FRAMES[frame].color;
   const highEnd = tier === "highEnd";
@@ -87,9 +91,10 @@ export function Extension({
   const openW = unitW + 0.16;
   const openH = 2.42;
 
-  // pair of flat rooflights, smaller and spread apart like the reference
-  const skyS = Math.min(0.95, width * 0.24);
-  const skyX = width * 0.22;
+  // pair of flat rooflights — sized to read clearly from the default camera,
+  // held clear of the roof edge and of each other
+  const skyS = Math.min(1.7, width * 0.34, depth * 0.55);
+  const skyX = Math.min(width * 0.26, (width - 0.5) / 2 - skyS / 2);
 
   // lantern footprint, centred on the roof
   const lanW = Math.min(2.7, width * 0.58);
@@ -97,7 +102,12 @@ export function Extension({
 
   // wall thickness for hollow construction
   const wt = 0.15;
-  const interiorColor = "#b8b0a1";
+  // interior read through the glazing: off-white plaster against a warmer
+  // timber floor, so the room has depth instead of reading as one flat box
+  const interiorColor = INTERIOR;
+  const innerW = width - wt * 2;
+  const innerD = depth - wallT - wt;
+  const innerZ = (depth - wallT + wt) / 2;
 
   return (
     <group ref={group}>
@@ -120,38 +130,40 @@ export function Extension({
         matId={material}
       />
 
-      {/* Interior surfaces seen through the glazing */}
-      {/* floor */}
-      <CBox
-        size={[width - wt * 2, 0.02, depth - wallT - wt]}
-        position={[0, 0.01, (depth - wallT + wt) / 2]}
-        color={interiorColor}
+      {/* Interior surfaces seen through the glazing. The floor is a real
+          slab sitting level with the door threshold, so no ground ever
+          shows through the glass. */}
+      {/* timber floor */}
+      <TexBox
+        size={[innerW, 0.05, innerD]}
+        position={[0, 0.025, innerZ]}
+        matId="oakFloor"
         castShadow={false}
       />
       {/* ceiling */}
       <CBox
-        size={[width - wt * 2, 0.02, depth - wallT - wt]}
-        position={[0, wallH - 0.01, (depth - wallT + wt) / 2]}
+        size={[innerW, 0.02, innerD]}
+        position={[0, wallH - 0.01, innerZ]}
         color={interiorColor}
         castShadow={false}
       />
       {/* left interior wall */}
       <CBox
-        size={[0.02, wallH, depth - wallT - wt]}
-        position={[-width / 2 + wt + 0.01, wallH / 2, (depth - wallT + wt) / 2]}
+        size={[0.02, wallH, innerD]}
+        position={[-width / 2 + wt + 0.01, wallH / 2, innerZ]}
         color={interiorColor}
         castShadow={false}
       />
       {/* right interior wall */}
       <CBox
-        size={[0.02, wallH, depth - wallT - wt]}
-        position={[width / 2 - wt - 0.01, wallH / 2, (depth - wallT + wt) / 2]}
+        size={[0.02, wallH, innerD]}
+        position={[width / 2 - wt - 0.01, wallH / 2, innerZ]}
         color={interiorColor}
         castShadow={false}
       />
       {/* back interior wall */}
       <CBox
-        size={[width - wt * 2, wallH, 0.02]}
+        size={[innerW, wallH, 0.02]}
         position={[0, wallH / 2, wt + 0.01]}
         color={interiorColor}
         castShadow={false}
@@ -217,7 +229,7 @@ export function Extension({
             depth={depth}
             rise={PITCH_RISE}
             wallTop={wallH}
-            matId={roofFinish}
+            matId={EXT_ROOF_FINISH}
             cheekMatId={material}
           />
           <SlopeRooflights width={width} depth={depth} wallH={wallH} />
@@ -711,7 +723,7 @@ function Rooflight({
       <mesh
         position={[0, 0.005, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
-        material={flatMaterial("#b8b0a1", 0.95)}
+        material={flatMaterial(INTERIOR, 0.95)}
         castShadow={false}
       >
         <planeGeometry args={[size, size]} />
@@ -747,7 +759,7 @@ function Lantern({
       <mesh
         position={[0, 0.065, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
-        material={flatMaterial("#b8b0a1", 0.95)}
+        material={flatMaterial(INTERIOR, 0.95)}
         castShadow={false}
       >
         <planeGeometry args={[w, d]} />
@@ -794,7 +806,7 @@ function SlopeRooflights({
           <mesh
             position={[0, 0.045, 0]}
             rotation={[-Math.PI / 2, 0, 0]}
-            material={flatMaterial("#b8b0a1", 0.95)}
+            material={flatMaterial(INTERIOR, 0.95)}
             castShadow={false}
           >
             <planeGeometry args={[glassW, glassD]} />

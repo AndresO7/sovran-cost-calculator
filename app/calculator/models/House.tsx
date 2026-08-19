@@ -4,7 +4,7 @@ import { HOUSE, LoftFinishId } from "../config";
 import { CalculatorState } from "../state";
 import { Extension } from "./Extension";
 import { Garden } from "./Garden";
-import { Loft } from "./Loft";
+import { BOX_DORMER_EAVE_STRIP, Loft } from "./Loft";
 import { flatMaterial } from "./materials";
 import {
   CBox,
@@ -66,6 +66,15 @@ export function House({ state }: { state: CalculatorState }) {
   // is priced per metre against, so the drawing tracks the estimate.
   const D = state.loft.depth;
   const ROOF_H = D * ROOF_PITCH;
+  // A full-width dormer replaces the rear slope. Cutting the roof back to
+  // where the dormer starts is what stops the slope running through the
+  // converted room and showing as a ceiling through the dormer windows.
+  const rearRoofDepth =
+    state.loft.type === "boxDormer"
+      ? BOX_DORMER_EAVE_STRIP
+      : state.loft.type === "mansardDormer"
+        ? 0
+        : Infinity;
 
   return (
     <group ref={ref}>
@@ -123,6 +132,7 @@ export function House({ state }: { state: CalculatorState }) {
         w={W + OVER * 2}
         d={D + OVER * 2}
         h={ROOF_H}
+        rearDepth={rearRoofDepth}
         finish={state.loft.finish}
         position={[0, WALL_H, -D / 2]}
       />
@@ -213,12 +223,11 @@ export function House({ state }: { state: CalculatorState }) {
           roof={state.ground.roof}
           glazing={state.ground.glazing}
           frame={state.ground.frame}
-          roofFinish={state.loft.finish}
         />
       )}
       <Loft
         type={state.loft.type}
-        finish={state.loft.finish}
+        layout={state.loft.layout}
         frame={state.loft.frame}
         roofW={W + OVER * 2}
         slopeHalfD={(D + OVER * 2) / 2}
@@ -227,7 +236,7 @@ export function House({ state }: { state: CalculatorState }) {
         rearEaveZ={-D / 2 + (D + OVER * 2) / 2}
       />
 
-      <Garden houseW={W} houseD={D} patio={state.ground.patio} ext={ext} />
+      <Garden houseW={W} houseD={D} ext={ext} />
     </group>
   );
 }

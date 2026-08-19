@@ -13,12 +13,10 @@ import {
   LOFT_LAYOUTS,
   LOFT_TYPES,
   MATERIALS,
-  PATIOS,
   TIERS,
 } from "../config";
 import { formatRange, PriceBreakdown, PriceRange } from "../pricing";
 import { CalculatorAction, CalculatorState } from "../state";
-import { ZONES } from "../zones";
 import { ACCENT, FAINT, FG, LINE, MUTED, priceTag } from "./controls";
 
 const inputStyle: React.CSSProperties = {
@@ -61,7 +59,6 @@ export function QuoteModal({
   const close = () => dispatch({ type: "SET_QUOTE_OPEN", open: false });
 
   const { ground, loft } = state;
-  const zone = ZONES[price.zone];
   const groups: Group[] = [];
 
   if (price.extension) {
@@ -86,7 +83,6 @@ export function QuoteModal({
         ["Roof", EXT_ROOFS[ground.roof].label, EXT_ROOFS[ground.roof].price],
         ["Doors", GLAZING[ground.glazing].label, GLAZING[ground.glazing].price],
         ["Frames", EXT_FRAMES[ground.frame].label, EXT_FRAMES[ground.frame].price],
-        ["Patio", PATIOS[ground.patio].label, PATIOS[ground.patio].price],
       ],
     });
   }
@@ -241,14 +237,15 @@ export function QuoteModal({
 
             {/* summary */}
             <div style={{ marginBottom: 26 }}>
-              {/* property + zone the rates come from */}
+              {/* property + where it is. The rate band stays behind the
+                  arithmetic — the customer sees the place, not the band. */}
               <div style={{ borderTop: `1px solid ${LINE}` }}>
                 <SummaryRow label="Property" value={`${HOUSE.label} · ${HOUSE.sub}`} />
                 <SummaryRow
-                  label="Zone"
-                  value={`${zone.label} — ${
-                    state.location.borough ?? zone.sub
-                  }${state.location.postcode ? ` · ${state.location.postcode}` : ""}`}
+                  label="Location"
+                  value={[state.location.borough, state.location.postcode]
+                    .filter(Boolean)
+                    .join(" · ")}
                 />
               </div>
 

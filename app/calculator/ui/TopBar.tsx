@@ -5,7 +5,6 @@ import gsap from "gsap";
 import { HOUSE } from "../config";
 import { formatPrice, PriceBreakdown } from "../pricing";
 import { CalculatorAction, LocationState } from "../state";
-import { ZONES } from "../zones";
 import { ACCENT, Arrow, arrowButton, FG, LINE, microLabel, MUTED } from "./controls";
 
 function useCountUp(value: number): number {
@@ -25,7 +24,7 @@ function useCountUp(value: number): number {
   return display;
 }
 
-/** Sub-toolbar under the site nav: property · zone · live estimate · CTA. */
+/** Sub-toolbar under the site nav: property · location · live estimate · CTA. */
 export function TopBar({
   price,
   location,
@@ -37,7 +36,9 @@ export function TopBar({
 }) {
   const low = useCountUp(price.total.low);
   const high = useCountUp(price.total.high);
-  const zone = ZONES[price.zone];
+  // the borough the postcode resolved to; the raw postcode is the fallback
+  // when the lookup service was unreachable
+  const place = location.borough ?? (location.postcode.trim() || null);
   // with neither project selected there is nothing to price — showing £0
   // would read as "this build is free" rather than "nothing chosen yet"
   const hasWorks = price.extension !== null || price.loft !== null;
@@ -58,8 +59,14 @@ export function TopBar({
         flexShrink: 0,
       }}
     >
-      <span style={{ ...microLabel, whiteSpace: "nowrap" }}>Configure</span>
-      <span aria-hidden style={{ width: 1, height: 22, background: LINE }} />
+      <span className="calc-topbar-trim" style={{ ...microLabel, whiteSpace: "nowrap" }}>
+        Configure
+      </span>
+      <span
+        aria-hidden
+        className="calc-topbar-trim"
+        style={{ width: 1, height: 22, background: LINE }}
+      />
 
       {/* host property */}
       <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
@@ -77,6 +84,7 @@ export function TopBar({
           {HOUSE.label}
         </span>
         <span
+          className="calc-topbar-trim"
           style={{
             fontFamily: "var(--font-outfit)",
             fontWeight: 300,
@@ -91,43 +99,35 @@ export function TopBar({
         </span>
       </div>
 
-      {/* pricing zone the estimate is derived from */}
-      <div
-        className="calc-zone"
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: 8,
-          padding: "5px 11px",
-          border: "1px solid rgba(184,148,78,0.4)",
-          background: "rgba(184,148,78,0.07)",
-          whiteSpace: "nowrap",
-        }}
-        title={`${zone.label} — ${zone.sub}`}
-      >
-        <span
+      {/* where the property is. The rate band it resolves to is deliberately
+          not shown — it is an input to the arithmetic, not something the
+          customer needs to read. */}
+      {place && (
+        <div
+          className="calc-zone"
           style={{
-            fontFamily: "var(--font-bodoni)",
-            fontWeight: 600,
-            fontSize: 12,
-            color: ACCENT,
+            display: "flex",
+            alignItems: "baseline",
+            padding: "5px 11px",
+            border: "1px solid rgba(184,148,78,0.4)",
+            background: "rgba(184,148,78,0.07)",
+            whiteSpace: "nowrap",
           }}
         >
-          {zone.label}
-        </span>
-        <span
-          style={{
-            fontFamily: "var(--font-outfit)",
-            fontWeight: 300,
-            fontSize: "clamp(9px, 0.7vw, 10.5px)",
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            color: MUTED,
-          }}
-        >
-          {location.borough ?? zone.sub}
-        </span>
-      </div>
+          <span
+            style={{
+              fontFamily: "var(--font-outfit)",
+              fontWeight: 300,
+              fontSize: "clamp(9px, 0.7vw, 10.5px)",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: MUTED,
+            }}
+          >
+            {place}
+          </span>
+        </div>
+      )}
 
       <div style={{ flex: 1 }} />
 
@@ -171,7 +171,11 @@ export function TopBar({
         </span>
       </div>
 
-      <span aria-hidden style={{ width: 1, height: 22, background: LINE }} />
+      <span
+        aria-hidden
+        className="calc-topbar-trim"
+        style={{ width: 1, height: 22, background: LINE }}
+      />
 
       {/* CTA — bordered rectangle with arrow */}
       <button
