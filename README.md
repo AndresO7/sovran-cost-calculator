@@ -2,7 +2,11 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+Este proyecto necesita credenciales de Supabase para arrancar: el calculador exige sesión
+iniciada y guarda los modelos de cada usuario. Sigue **[docs/SETUP-SUPABASE.md](docs/SETUP-SUPABASE.md)**
+antes del primer `npm run dev`.
+
+Luego, arranca el servidor de desarrollo:
 
 ```bash
 npm run dev
