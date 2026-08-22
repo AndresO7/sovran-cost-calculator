@@ -6,6 +6,7 @@ import gsap from "gsap";
 import { areaExceedsModel, EXT_DEPTH, HOUSE, LOFT_TYPES } from "./config";
 import { calculatePrice } from "./pricing";
 import { CalculatorState, initialState, reducer } from "./state";
+import { fromSavedConfig, parseSavedConfig, SAVED_SCHEMA_VERSION } from "./persistence";
 import { CaptureFn } from "./thumbnail";
 import { ConfigPanel } from "./ui/ConfigPanel";
 import { microLabel } from "./ui/controls";
@@ -19,12 +20,28 @@ const Scene = dynamic(() => import("./Scene"), {
   loading: () => <SceneFallback message="Preparing your model…" />,
 });
 
-export default function Calculator() {
-  const [state, dispatch] = useReducer(reducer, initialState);
+export default function Calculator({ initial }: { initial?: CalculatorState }) {
+  const [state, dispatch] = useReducer(reducer, initial ?? initialState);
   const price = useMemo(() => calculatePrice(state), [state]);
   const rootRef = useRef<HTMLDivElement>(null);
   // la rellena CaptureBridge una vez montado el canvas
   const captureRef = useRef<CaptureFn | null>(null);
+
+  // Tras volver de /login por una sesión caducada, devolver a la pantalla el
+  // modelo que el usuario estaba a punto de guardar. No se reintenta el
+  // guardado solo: se le devuelve el trabajo y él decide.
+  useEffect(() => {
+    if (initial) return; // una URL con ?model= manda sobre lo pendiente
+    const raw = sessionStorage.getItem("sovran:pending-save");
+    if (!raw) return;
+    sessionStorage.removeItem("sovran:pending-save");
+    try {
+      const config = parseSavedConfig(JSON.parse(raw), SAVED_SCHEMA_VERSION);
+      if (config) dispatch({ type: "RESTORE", state: fromSavedConfig(config) });
+    } catch {
+      // una configuración pendiente ilegible se descarta en silencio
+    }
+  }, [initial]);
 
   // entrance reveal — runs once the intro questions are answered
   useEffect(() => {

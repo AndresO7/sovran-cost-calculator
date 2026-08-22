@@ -9,6 +9,13 @@ import { CalculatorState, initialState } from "./state";
 export const SAVED_SCHEMA_VERSION = 1;
 
 /**
+ * Tope de modelos por cuenta. Vive aquí y no en actions.ts porque un módulo
+ * "use server" solo puede exportar funciones asíncronas: exportar una
+ * constante desde allí anula todos los exports del módulo.
+ */
+export const MAX_MODELS_PER_USER = 50;
+
+/**
  * Una unión de literales que, ante un valor desconocido, cae en el por defecto
  * en lugar de invalidar el modelo entero: un proyecto guardado con una opción
  * que después se retiró debe seguir abriéndose.

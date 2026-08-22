@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { parseSavedConfig, SAVED_SCHEMA_VERSION } from "./persistence";
-
-export const MAX_MODELS_PER_USER = 50;
+import {
+  MAX_MODELS_PER_USER,
+  parseSavedConfig,
+  SAVED_SCHEMA_VERSION,
+} from "./persistence";
 
 export type SaveResult =
   | { ok: true; id: string }

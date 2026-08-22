@@ -98,7 +98,9 @@ export type CalculatorAction =
   | { type: "SET_LOFT_LAYOUT"; layout: LoftLayoutId }
   | { type: "SET_LOFT_FRAME"; frame: FrameId }
   | { type: "SET_TAB"; tab: TabId }
-  | { type: "SET_QUOTE_OPEN"; open: boolean };
+  | { type: "SET_QUOTE_OPEN"; open: boolean }
+  /** vuelca un estado completo: se usa al recuperar un guardado pendiente */
+  | { type: "RESTORE"; state: CalculatorState };
 
 const clamp = (n: number, min: number, max: number) =>
   Math.min(max, Math.max(min, n));
@@ -172,6 +174,8 @@ export function reducer(
       return { ...state, activeTab: action.tab };
     case "SET_QUOTE_OPEN":
       return { ...state, quoteOpen: action.open };
+    case "RESTORE":
+      return action.state;
     default:
       return state;
   }

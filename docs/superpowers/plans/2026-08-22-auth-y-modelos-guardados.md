@@ -197,6 +197,13 @@ import { CalculatorState, initialState } from "./state";
 export const SAVED_SCHEMA_VERSION = 1;
 
 /**
+ * Tope de modelos por cuenta. Vive aquí y no en actions.ts porque un módulo
+ * "use server" solo puede exportar funciones asíncronas: exportar una
+ * constante desde allí anula todos los exports del módulo.
+ */
+export const MAX_MODELS_PER_USER = 50;
+
+/**
  * Una unión de literales que, ante un valor desconocido, cae en el por defecto
  * en lugar de invalidar el modelo entero: un proyecto guardado con una opción
  * que después se retiró debe seguir abriéndose.
@@ -1221,8 +1228,9 @@ git commit -m "feat: captura webp del canvas a demanda"
 - Produces:
   - `type SaveResult = { ok: true; id: string } | { ok: false; error: string; code: "unauthenticated" | "limit" | "invalid" | "server" }`
   - `saveModel(formData: FormData): Promise<SaveResult>`
-  - `MAX_MODELS_PER_USER = 50`
   - `<SaveButton state price captureRef />`
+
+**Cuidado:** un módulo `"use server"` solo puede exportar funciones asíncronas. Exportar una constante desde `actions.ts` hace que el módulo se quede sin exports y el build falle con `Export saveModel doesn't exist in target module`. `tsc --noEmit` no lo detecta; solo `npm run build`. Por eso `MAX_MODELS_PER_USER` vive en `persistence.ts`. Los `export type` sí son válidos, porque se borran al compilar.
 
 - [ ] **Step 1: Server Action de guardado**
 
@@ -1233,9 +1241,11 @@ Crear `app/calculator/actions.ts`:
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { parseSavedConfig, SAVED_SCHEMA_VERSION } from "./persistence";
-
-export const MAX_MODELS_PER_USER = 50;
+import {
+  MAX_MODELS_PER_USER,
+  parseSavedConfig,
+  SAVED_SCHEMA_VERSION,
+} from "./persistence";
 
 export type SaveResult =
   | { ok: true; id: string }
