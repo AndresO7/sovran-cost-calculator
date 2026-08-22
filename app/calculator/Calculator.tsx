@@ -6,6 +6,7 @@ import gsap from "gsap";
 import { areaExceedsModel, EXT_DEPTH, HOUSE, LOFT_TYPES } from "./config";
 import { calculatePrice } from "./pricing";
 import { CalculatorState, initialState, reducer } from "./state";
+import { CaptureFn } from "./thumbnail";
 import { ConfigPanel } from "./ui/ConfigPanel";
 import { microLabel } from "./ui/controls";
 import { QuoteModal } from "./ui/QuoteModal";
@@ -22,6 +23,8 @@ export default function Calculator() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const price = useMemo(() => calculatePrice(state), [state]);
   const rootRef = useRef<HTMLDivElement>(null);
+  // la rellena CaptureBridge una vez montado el canvas
+  const captureRef = useRef<CaptureFn | null>(null);
 
   // entrance reveal — runs once the intro questions are answered
   useEffect(() => {
@@ -47,7 +50,7 @@ export default function Calculator() {
               style={{ position: "relative", background: "#efe9dd" }}
             >
               <SceneBoundary>
-                <Scene state={state} />
+                <Scene state={state} captureRef={captureRef} />
               </SceneBoundary>
               <ViewportDressing state={state} />
             </div>

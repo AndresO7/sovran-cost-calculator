@@ -8,6 +8,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { House } from "./models/House";
 import { setGlassEnvMap } from "./models/materials";
 import { CalculatorState } from "./state";
+import { CaptureRef } from "./thumbnail";
 
 /**
  * Procedural studio env-map fed to the glazing only — gives the glass
@@ -29,10 +30,43 @@ function GlassEnvironment() {
 }
 
 /**
+ * Expone una función de captura al exterior del Canvas. Renderiza a demanda y
+ * lee el buffer en el mismo tick: así no hace falta preserveDrawingBuffer, que
+ * obligaría a conservar el framebuffer en cada fotograma de la escena.
+ */
+function CaptureBridge({ captureRef }: { captureRef: CaptureRef }) {
+  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
+  const camera = useThree((s) => s.camera);
+
+  useEffect(() => {
+    captureRef.current = () => {
+      try {
+        gl.render(scene, camera);
+        return gl.domElement.toDataURL("image/webp", 0.9);
+      } catch {
+        return null;
+      }
+    };
+    return () => {
+      captureRef.current = null;
+    };
+  }, [captureRef, gl, scene, camera]);
+
+  return null;
+}
+
+/**
  * The architect's-model viewport: soft daylight on a warm cream studio,
  * gentle sun with cool sky fill. Client-only (loaded with ssr: false).
  */
-export default function Scene({ state }: { state: CalculatorState }) {
+export default function Scene({
+  state,
+  captureRef,
+}: {
+  state: CalculatorState;
+  captureRef?: CaptureRef;
+}) {
   const [interacted, setInteracted] = useState(false);
 
   return (
@@ -46,6 +80,7 @@ export default function Scene({ state }: { state: CalculatorState }) {
       <fog attach="fog" args={["#efe9dd", 34, 75]} />
 
       <GlassEnvironment />
+      {captureRef && <CaptureBridge captureRef={captureRef} />}
 
       <hemisphereLight args={["#e8f0f8", "#cfc5b2", 0.95]} />
       {/* sun — warm, raking across the garden elevation */}
