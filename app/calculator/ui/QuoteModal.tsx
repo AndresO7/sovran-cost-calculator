@@ -8,7 +8,6 @@ import {
   EXT_ROOFS,
   GLAZING,
   HOUSE,
-  LOFT_FINISHES,
   LOFT_FRAMES,
   LOFT_LAYOUTS,
   LOFT_TYPES,
@@ -100,7 +99,6 @@ export function QuoteModal({
           LOFT_LAYOUTS[loft.layout].price,
         ],
         ["Frames", LOFT_FRAMES[loft.frame].label, LOFT_FRAMES[loft.frame].price],
-        ["Re-roof", LOFT_FINISHES[loft.finish].label, LOFT_FINISHES[loft.finish].price],
       ],
     });
   }

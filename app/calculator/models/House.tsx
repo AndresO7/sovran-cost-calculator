@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import * as THREE from "three";
-import { HOUSE, LoftFinishId } from "../config";
+import { HOUSE } from "../config";
 import { CalculatorState } from "../state";
 import { Extension } from "./Extension";
 import { Garden } from "./Garden";
@@ -48,12 +48,14 @@ const REAR_GROUND_OPENINGS: WallOpening[] = [
   { x: 1.55, y: 1.6, w: 1.5, h: 1.45 },
 ];
 
+/**
+ * Roofing is not a choice: every roof surface in the model — main slopes,
+ * dormer cladding, extension — is the same grey slate, so the drawing reads
+ * as one building rather than a colour sampler.
+ */
+const ROOF_FINISH = "slate" as const;
 // roof-edge trim reads as part of the roof, not white-painted timber
-const ROOF_TRIM: Record<LoftFinishId, string> = {
-  slate: "#565d66",
-  clay: "#8f4b32",
-  zincRoof: "#54595f",
-};
+const ROOF_TRIM = "#565d66";
 
 /** Brick semi — two storeys, gabled roof. Hosts the extension and loft. */
 export function House({ state }: { state: CalculatorState }) {
@@ -122,7 +124,7 @@ export function House({ state }: { state: CalculatorState }) {
           key={s}
           size={[W + 0.16, 0.14, 0.2]}
           position={[0, WALL_H - 0.07, s === 1 ? 0.04 : -D - 0.04]}
-          color={ROOF_TRIM[state.loft.finish]}
+          color={ROOF_TRIM}
           castShadow={false}
         />
       ))}
@@ -133,7 +135,7 @@ export function House({ state }: { state: CalculatorState }) {
         d={D + OVER * 2}
         h={ROOF_H}
         rearDepth={rearRoofDepth}
-        finish={state.loft.finish}
+        finish={ROOF_FINISH}
         position={[0, WALL_H, -D / 2]}
       />
       {([-1, 1] as const).map((s) => (
@@ -169,7 +171,7 @@ export function House({ state }: { state: CalculatorState }) {
                 -D / 2 + (sz * halfD) / 2,
               ]}
               rotation={[sz * pitch, 0, 0]}
-              color={ROOF_TRIM[state.loft.finish]}
+              color={ROOF_TRIM}
               castShadow={false}
             />
           );

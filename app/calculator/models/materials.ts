@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { LoftFinishId, MaterialId } from "../config";
+import { MaterialId } from "../config";
 
 // All textures are generated procedurally on a 2D canvas — no external assets.
 // Textures are authored at a fixed physical scale (TILE_METRES) and repeated
@@ -205,17 +205,9 @@ const WALL_SPECS: Record<MaterialId, MaterialSpec> = {
   },
 };
 
-const ROOF_SPECS: Record<LoftFinishId, MaterialSpec> = {
-  slate: { painter: paintCourses("#5a626c", 0.09, 17, "#40464e", 61), roughness: 0.75 },
-  clay: { painter: paintCourses("#9c5237", 0.12, 16, "#5e3322", 71), roughness: 0.85 },
-  zincRoof: {
-    painter: paintVerticalSeams("#5b6066", "#3c4045", 8, 0.06, 81),
-    roughness: 0.45,
-    metalness: 0.55,
-  },
-};
-
 const EXTRA_SPECS = {
+  // the one roofing finish — every roof surface in the model uses it
+  slate: { painter: paintCourses("#5a626c", 0.09, 17, "#40464e", 61), roughness: 0.75 },
   houseBrick: {
     painter: paintBricks("#7d4f3d", ["#734736", "#875a46", "#6a4132", "#815341"], "#b0a496", 91),
     roughness: 0.95,
@@ -232,11 +224,10 @@ const EXTRA_SPECS = {
 } satisfies Record<string, MaterialSpec>;
 
 export type ExtraMaterialId = keyof typeof EXTRA_SPECS;
-export type AnyMaterialId = MaterialId | LoftFinishId | ExtraMaterialId;
+export type AnyMaterialId = MaterialId | ExtraMaterialId;
 
 const ALL_SPECS: Record<AnyMaterialId, MaterialSpec> = {
   ...WALL_SPECS,
-  ...ROOF_SPECS,
   ...EXTRA_SPECS,
 };
 

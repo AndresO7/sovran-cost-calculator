@@ -7,7 +7,6 @@ import {
   GlazingId,
   HOUSE,
   LOFT_DEPTH,
-  LoftFinishId,
   LoftLayoutId,
   LoftTypeId,
   MaterialId,
@@ -52,7 +51,6 @@ export interface CalculatorState {
     depth: number;
     layout: LoftLayoutId;
     frame: FrameId;
-    finish: LoftFinishId;
   };
   activeTab: TabId;
   quoteOpen: boolean;
@@ -76,7 +74,6 @@ export const initialState: CalculatorState = {
     depth: LOFT_DEPTH.default,
     layout: "a",
     frame: "black",
-    finish: "slate",
   },
   activeTab: "ground",
   quoteOpen: false,
@@ -100,7 +97,6 @@ export type CalculatorAction =
   | { type: "SET_LOFT_DEPTH"; depth: number }
   | { type: "SET_LOFT_LAYOUT"; layout: LoftLayoutId }
   | { type: "SET_LOFT_FRAME"; frame: FrameId }
-  | { type: "SET_LOFT_FINISH"; finish: LoftFinishId }
   | { type: "SET_TAB"; tab: TabId }
   | { type: "SET_QUOTE_OPEN"; open: boolean };
 
@@ -172,8 +168,6 @@ export function reducer(
       return { ...state, loft: { ...state.loft, layout: action.layout } };
     case "SET_LOFT_FRAME":
       return { ...state, loft: { ...state.loft, frame: action.frame } };
-    case "SET_LOFT_FINISH":
-      return { ...state, loft: { ...state.loft, finish: action.finish } };
     case "SET_TAB":
       return { ...state, activeTab: action.tab };
     case "SET_QUOTE_OPEN":

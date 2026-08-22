@@ -16,7 +16,6 @@ export type ExtRoofId = "flat" | "rooflights" | "lantern" | "pitched";
 export type GlazingId = "double" | "bifold" | "sliding";
 export type LoftTypeId = "none" | "boxDormer" | "mansardDormer";
 export type LoftLayoutId = "a" | "b" | "c" | "d";
-export type LoftFinishId = "slate" | "clay" | "zincRoof";
 export type FrameId = "black" | "white" | "anthracite" | "bronze";
 
 /** The single host property every project is modelled on. */
@@ -186,14 +185,3 @@ export const LOFT_FRAMES = frameTable({
   anthracite: 400,
   bronze: 500,
 });
-
-/* ------------------------- visual-only options (£0) -------------------------- */
-// Not priced by the guide, but wired into the 3D model — kept as free choices
-// so the total always matches the guide without losing configurability.
-
-/** Whole-roof finish — re-roofs the main roof and clads the dormer. */
-export const LOFT_FINISHES: Record<LoftFinishId, PricedOption> = {
-  slate: { label: "Welsh slate", price: 0 },
-  clay: { label: "Clay tiles", price: 0 },
-  zincRoof: { label: "Zinc seam", price: 0 },
-};

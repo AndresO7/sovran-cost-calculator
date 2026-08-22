@@ -14,12 +14,10 @@ import {
   GlazingId,
   HOUSE,
   LOFT_DEPTH,
-  LOFT_FINISHES,
   LOFT_FRAMES,
   LOFT_LAYOUTS,
   LOFT_RATES,
   LOFT_TYPES,
-  LoftFinishId,
   LoftLayoutId,
   LoftTypeId,
   MATERIALS,
@@ -397,25 +395,6 @@ export function ConfigPanel({
                 </Section>
               </>
             )}
-
-            <Section index={hasLoft ? "05" : "02"} label="Roof finish — main roof">
-              <SwatchRow
-                options={(Object.keys(LOFT_FINISHES) as LoftFinishId[]).map((id) => ({
-                  id,
-                  label: LOFT_FINISHES[id].label,
-                  price: LOFT_FINISHES[id].price,
-                }))}
-                value={state.loft.finish}
-                onChange={(id) =>
-                  dispatch({ type: "SET_LOFT_FINISH", finish: id as LoftFinishId })
-                }
-              />
-              <p style={note}>
-                Applied to the main roof slopes. Dormer cladding and extension
-                roofing stay in standard grey. Shown for context; roofing is
-                quoted separately.
-              </p>
-            </Section>
           </>
         )}
 

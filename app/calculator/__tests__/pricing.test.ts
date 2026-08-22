@@ -23,7 +23,7 @@ const base: CalculatorState = {
     glazing: "double",
     frame: "black",
   },
-  loft: { type: "none", depth: 7.4, layout: "a", frame: "black", finish: "slate" },
+  loft: { type: "none", depth: 7.4, layout: "a", frame: "black" },
   activeTab: "ground",
   quoteOpen: false,
 };
