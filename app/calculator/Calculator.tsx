@@ -43,7 +43,13 @@ export default function Calculator() {
       <SiteNav />
       {state.started ? (
         <>
-          <TopBar price={price} location={state.location} dispatch={dispatch} />
+          <TopBar
+            price={price}
+            location={state.location}
+            dispatch={dispatch}
+            state={state}
+            captureRef={captureRef}
+          />
           <div className="calc-body">
             <div
               className="calc-viewport"

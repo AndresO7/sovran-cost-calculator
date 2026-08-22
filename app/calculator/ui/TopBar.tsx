@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import gsap from "gsap";
 import { HOUSE } from "../config";
 import { formatPrice, PriceBreakdown } from "../pricing";
-import { CalculatorAction, LocationState } from "../state";
+import { CalculatorAction, CalculatorState, LocationState } from "../state";
+import { CaptureFn } from "../thumbnail";
 import { ACCENT, Arrow, arrowButton, FG, LINE, microLabel, MUTED } from "./controls";
+import { SaveButton } from "./SaveButton";
 
 function useCountUp(value: number): number {
   const [display, setDisplay] = useState(value);
@@ -29,10 +32,14 @@ export function TopBar({
   price,
   location,
   dispatch,
+  state,
+  captureRef,
 }: {
   price: PriceBreakdown;
   location: LocationState;
   dispatch: React.Dispatch<CalculatorAction>;
+  state: CalculatorState;
+  captureRef: React.RefObject<CaptureFn | null>;
 }) {
   const low = useCountUp(price.total.low);
   const high = useCountUp(price.total.high);
@@ -205,6 +212,52 @@ export function TopBar({
         Detailed Quote
         <Arrow />
       </button>
+
+      <span
+        aria-hidden
+        className="calc-topbar-trim"
+        style={{ width: 1, height: 22, background: LINE }}
+      />
+
+      {/* cuenta: guardar el modelo, volver a los guardados y salir */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <SaveButton state={state} price={price} captureRef={captureRef} />
+        <Link
+          href="/models"
+          className="calc-topbar-trim"
+          style={{
+            fontFamily: "var(--font-outfit)",
+            fontSize: 10.5,
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            color: FG,
+            textDecoration: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          My models
+        </Link>
+        <form action="/auth/signout" method="post">
+          <button
+            type="submit"
+            className="calc-topbar-trim"
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              fontFamily: "var(--font-outfit)",
+              fontSize: 10.5,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: MUTED,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Sign out
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
