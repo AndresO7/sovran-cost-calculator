@@ -206,8 +206,17 @@ const fallbackEnum = <T extends readonly [string, ...string[]]>(
   fallback: T[number]
 ) => z.enum(values).catch(fallback);
 
+/**
+ * Un número acotado. Lo que no es número cae en el por defecto, pero un número
+ * fuera de rango se recorta al extremo más cercano en lugar de descartarse:
+ * quien guardó la extensión más profunda posible debe recuperar el máximo, no
+ * el valor de fábrica.
+ */
 const num = (min: number, max: number, fallback: number) =>
-  z.number().min(min).max(max).catch(fallback);
+  z
+    .number()
+    .catch(fallback)
+    .transform((v) => Math.min(max, Math.max(min, v)));
 
 const locationSchema = z
   .object({
