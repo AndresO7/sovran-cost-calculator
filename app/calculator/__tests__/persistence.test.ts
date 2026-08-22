@@ -54,6 +54,15 @@ describe("ida y vuelta", () => {
   });
 });
 
+/**
+ * El JSON guardado visto como estructura suelta, para poder corromperlo en los
+ * tests sin recurrir a `any`. Se clona en profundidad para que cada caso parta
+ * de una copia limpia.
+ */
+type Loose = Record<string, Record<string, unknown>>;
+const loose = (state: CalculatorState): Loose =>
+  JSON.parse(JSON.stringify(toSavedConfig(state))) as Loose;
+
 describe("parseSavedConfig", () => {
   it("acepta un JSON válido", () => {
     const parsed = parseSavedConfig(toSavedConfig(configured), SAVED_SCHEMA_VERSION);
@@ -62,7 +71,7 @@ describe("parseSavedConfig", () => {
   });
 
   it("rellena con los valores por defecto un campo que falta", () => {
-    const saved = toSavedConfig(configured) as Record<string, any>;
+    const saved = loose(configured);
     delete saved.loft.layout;
     const parsed = parseSavedConfig(saved, SAVED_SCHEMA_VERSION);
     expect(parsed).not.toBeNull();
@@ -70,14 +79,14 @@ describe("parseSavedConfig", () => {
   });
 
   it("recorta un valor fuera de rango en lugar de rechazar el modelo", () => {
-    const saved = toSavedConfig(configured) as Record<string, any>;
+    const saved = loose(configured);
     saved.ground.depth = 99;
     const parsed = parseSavedConfig(saved, SAVED_SCHEMA_VERSION);
     expect(parsed!.ground.depth).toBe(5);
   });
 
   it("descarta un valor de unión desconocido y usa el por defecto", () => {
-    const saved = toSavedConfig(configured) as Record<string, any>;
+    const saved = loose(configured);
     saved.ground.material = "unobtanium";
     const parsed = parseSavedConfig(saved, SAVED_SCHEMA_VERSION);
     expect(parsed!.ground.material).toBe(initialState.ground.material);

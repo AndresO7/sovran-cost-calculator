@@ -13,10 +13,14 @@ export const SAVED_SCHEMA_VERSION = 1;
  * en lugar de invalidar el modelo entero: un proyecto guardado con una opción
  * que después se retiró debe seguir abriéndose.
  */
-const fallbackEnum = <T extends readonly [string, ...string[]]>(
+const fallbackEnum = <const T extends readonly [string, ...string[]]>(
   values: T,
   fallback: T[number]
-) => z.enum(values).catch(fallback as never);
+): z.ZodType<T[number]> =>
+  // el cast conserva la unión de literales, que z.enum ensancharía a string
+  z.enum(values as unknown as [string, ...string[]]).catch(fallback) as z.ZodType<
+    T[number]
+  >;
 
 /**
  * Un número acotado. Lo que no es número cae en el por defecto, pero un número
