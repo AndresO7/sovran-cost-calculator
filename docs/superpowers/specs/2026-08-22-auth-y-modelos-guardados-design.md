@@ -150,11 +150,15 @@ Es puro y aislado, sin Supabase ni React:
 1. El usuario pulsa "Guardar" en `TopBar`.
 2. `SaveButton` pide al canvas una captura: `gl.render(scene, camera)` seguido de
    `toDataURL` en el mismo tick, y reescalado a 640×400 en un canvas fuera de pantalla.
-3. Una sola Server Action `saveModel({ name, config, price, thumbnail })` valida la sesión,
-   inserta la fila y sube la imagen con el cliente de servidor —la sesión del propio
-   usuario, sin clave de servicio— y hace `revalidatePath('/models')`.
+3. Una sola Server Action `saveModel(formData)` valida la sesión, inserta la fila, sube la
+   imagen con el cliente de servidor —la sesión del propio usuario, sin clave de servicio— y
+   hace `revalidatePath('/models')`.
 
-Es una operación atómica: si la subida falla, no queda fila huérfana.
+**La miniatura nunca bloquea el guardado, en ninguna etapa.** Si falla la captura en el
+navegador o la subida en el servidor, la fila se guarda igual con `thumbnail_path` nulo y la
+tarjeta muestra un marcador. La configuración es el dato valioso; la imagen es decoración
+reconstruible. La consistencia que sí se garantiza es la inversa: al borrar un modelo se
+elimina también su objeto en Storage, de modo que nunca quedan imágenes huérfanas.
 
 ### Por qué no se activa `preserveDrawingBuffer`
 
@@ -168,7 +172,7 @@ de forma imperativa cuesta un render extra puntual y no penaliza el resto de la 
 | Situación | Comportamiento |
 |---|---|
 | Sesión caducada al guardar | El estado se deja en `sessionStorage`, se redirige a `/login` y se reanuda el guardado al volver |
-| Fallo en la captura de la miniatura | Se guarda igual con `thumbnail_path` nulo; la tarjeta muestra un marcador. La imagen nunca bloquea el guardado |
+| Fallo en la captura o en la subida de la miniatura | Se guarda igual con `thumbnail_path` nulo; la tarjeta muestra un marcador. La imagen nunca bloquea el guardado |
 | `config` corrupto o de un esquema futuro | La galería muestra la tarjeta como "no se puede abrir" en lugar de romper la página |
 | Límite de 50 modelos por usuario | La Server Action lo rechaza con un mensaje claro |
 | Borrado | La Server Action elimina también el objeto de Storage, para no acumular huérfanos |
